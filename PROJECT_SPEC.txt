@@ -1,0 +1,667 @@
+============================================================
+PROJECT MASTER SPECIFICATION
+============================
+
+PROJECT NAME:
+DocuMind — AI Document Intelligence & Knowledge Assistant
+
+PROJECT TYPE:
+Full-Stack AI Web Application
+
+PROJECT STATUS:
+PLANNING
+
+VERSION:
+1.0
+
+LAST UPDATED:
+23-09-2026
+
+============================================================
+
+1. PROJECT OVERVIEW
+   ============================================================
+
+PURPOSE:
+
+Build an AI-powered document intelligence platform that allows
+users to upload documents, search their documents, ask questions
+about document content, generate summaries, and compare documents.
+
+The system should provide answers based on the user's uploaded
+documents and show the relevant document/source information
+whenever possible.
+
+============================================================
+2. PROBLEM STATEMENT
+====================
+
+Users often have large PDF, DOCX, TXT and CSV files that are
+difficult to search manually.
+
+The system should allow users to upload their documents and
+interact with the information using natural-language questions.
+
+The application should retrieve relevant document content before
+generating an AI response.
+
+============================================================
+3. TARGET USERS
+===============
+
+1. Normal User
+2. Administrator
+
+============================================================
+4. MAIN OBJECTIVES
+==================
+
+1. Allow users to securely upload documents.
+2. Extract text from supported documents.
+3. Process documents into searchable chunks.
+4. Generate embeddings for document content.
+5. Store searchable document information.
+6. Allow users to ask questions about their documents.
+7. Retrieve relevant document content.
+8. Generate answers using an AI model.
+9. Show source/document information with answers.
+10. Maintain conversation history.
+11. Provide document summarization.
+12. Support document comparison.
+13. Provide user-level document permissions.
+14. Provide an administrator dashboard.
+15. Deploy the application.
+
+============================================================
+5. APPROVED TECHNOLOGY STACK
+============================
+
+FRONTEND:
+
+* Next.js
+* React.js
+* Tailwind CSS
+
+BACKEND:
+
+* Next.js API / server-side functionality
+
+AI BACKEND:
+
+* Python FastAPI may be used where it provides a clear
+  advantage for document processing or AI/RAG functionality.
+
+DATABASE:
+
+* PostgreSQL
+
+ORM:
+
+* Drizzle ORM
+
+VECTOR SEARCH:
+
+* PostgreSQL + pgvector
+
+AUTHENTICATION:
+
+* Clerk
+
+VALIDATION:
+
+* Zod
+
+CHARTS:
+
+* Recharts
+
+FILE STORAGE:
+
+* To be finalized before implementation.
+
+AI MODEL:
+
+* To be selected during AI integration phase.
+
+DEPLOYMENT:
+
+* Vercel for frontend/application where appropriate.
+* Backend hosting to be selected if FastAPI is used.
+
+VERSION CONTROL:
+
+* Git
+* GitHub
+
+IMPORTANT:
+
+Do not change the approved technology stack without asking for
+approval first.
+
+Do not add unnecessary technologies just because they are popular.
+
+============================================================
+6. USER ROLES
+=============
+
+6.1 NORMAL USER
+
+The user can:
+
+* Register/login
+* Upload documents
+* View own documents
+* Delete own documents
+* Search own documents
+* Ask questions
+* View AI responses
+* View source information
+* Create conversations
+* View conversation history
+* Summarize documents
+* Compare documents
+* Share documents where permitted
+* Manage profile
+
+6.2 ADMIN
+
+The administrator can:
+
+* View users
+* Manage users
+* View documents
+* Monitor document processing
+* View AI usage statistics
+* View system statistics
+* Monitor failed processing tasks
+* Manage system-level settings where required
+
+============================================================
+7. SUPPORTED DOCUMENT TYPES
+===========================
+
+Initial supported formats:
+
+* PDF
+* DOCX
+* TXT
+* CSV
+
+Future formats may be considered later.
+
+============================================================
+8. CORE FEATURES
+================
+
+8.1 AUTHENTICATION
+
+* Login
+* Logout
+* Registration
+* Protected routes
+* Role-based access
+
+8.2 DOCUMENT MANAGEMENT
+
+* Upload document
+* View document
+* Delete document
+* List documents
+* Search documents
+* Document metadata
+* Processing status
+
+8.3 DOCUMENT PROCESSING
+
+The system should:
+
+1. Receive uploaded file.
+2. Validate file.
+3. Store file.
+4. Extract text.
+5. Divide text into chunks.
+6. Generate embeddings.
+7. Store chunks and embeddings.
+8. Mark document as processed.
+
+8.4 AI QUESTION ANSWERING
+
+User flow:
+
+User asks question
+↓
+System identifies relevant documents
+↓
+Vector search
+↓
+Retrieve relevant chunks
+↓
+Send relevant context to AI model
+↓
+Generate answer
+↓
+Display answer + source information
+
+8.5 DOCUMENT SUMMARIZATION
+
+The system should allow the user to request:
+
+* Short summary
+* Detailed summary
+* Key points
+* Important dates
+* Important numbers
+* Action items where applicable
+
+8.6 DOCUMENT COMPARISON
+
+Users should be able to select two documents and request
+a comparison.
+
+The system should identify important differences and
+similarities.
+
+8.7 CONVERSATION HISTORY
+
+Store:
+
+* Conversation
+* User
+* Document/context used
+* User question
+* AI answer
+* Timestamp
+
+8.8 DOCUMENT PERMISSIONS
+
+Documents should not be accessible to unauthorized users.
+
+Initial permission types:
+
+* Private
+* Shared
+
+============================================================
+9. DATABASE DESIGN
+==================
+
+INITIAL TABLES:
+
+Users
+Documents
+DocumentChunks
+Conversations
+Messages
+DocumentPermissions
+
+Users:
+
+* id
+* name
+* email
+* role
+* created_at
+
+Documents:
+
+* id
+* user_id
+* filename
+* file_type
+* file_size
+* storage_url
+* processing_status
+* created_at
+
+DocumentChunks:
+
+* id
+* document_id
+* content
+* page_number
+* embedding
+
+Conversations:
+
+* id
+* user_id
+* document_id
+* created_at
+
+Messages:
+
+* id
+* conversation_id
+* role
+* content
+* created_at
+
+DocumentPermissions:
+
+* id
+* document_id
+* user_id
+* permission
+
+NOTE:
+
+The database schema may be refined during implementation,
+but changes must be explained before being made.
+
+============================================================
+10. REQUIRED PAGES
+==================
+
+PUBLIC:
+
+1. Landing Page
+2. Login
+3. Register
+
+USER:
+
+1. Dashboard
+2. Documents
+3. Upload Document
+4. Document Details
+5. AI Chat
+6. Conversations
+7. Document Comparison
+8. Profile
+
+ADMIN:
+
+1. Admin Dashboard
+2. Users
+3. Documents
+4. Processing Monitor
+5. AI Usage
+6. System Statistics
+
+============================================================
+11. ADMIN DASHBOARD
+===================
+
+Display:
+
+* Total users
+* Total documents
+* Processed documents
+* Failed documents
+* Questions asked
+* Storage usage
+* AI usage
+
+Charts:
+
+* Documents uploaded over time
+* Questions over time
+* Document types
+* Active users
+* Processing failures
+
+============================================================
+12. API REQUIREMENTS
+====================
+
+DOCUMENTS:
+
+POST   /api/documents/upload
+GET    /api/documents
+GET    /api/documents/:id
+DELETE /api/documents/:id
+
+PROCESSING:
+
+POST   /api/documents/:id/process
+
+AI:
+
+POST   /api/chat
+
+CONVERSATIONS:
+
+GET    /api/conversations
+GET    /api/conversations/:id
+DELETE /api/conversations/:id
+
+SHARING:
+
+POST   /api/documents/:id/share
+
+NOTE:
+
+API design can be refined during implementation if required.
+
+============================================================
+13. SECURITY REQUIREMENTS
+=========================
+
+The application must include:
+
+* Authentication
+* Authorization
+* Protected routes
+* User-level document isolation
+* Role-based access control
+* File type validation
+* File size validation
+* Input validation
+* Secure environment variables
+* API protection
+* Error handling
+* Appropriate logging
+
+IMPORTANT:
+
+A user must never be able to retrieve documents or document
+chunks belonging to another user without permission.
+
+============================================================
+14. NON-FUNCTIONAL REQUIREMENTS
+===============================
+
+PERFORMANCE:
+
+* Avoid unnecessary database queries.
+* Use appropriate indexing.
+* Avoid loading unnecessary document content.
+
+USABILITY:
+
+* Simple navigation.
+* Clear interface.
+* Clear loading states.
+* Clear error messages.
+
+RESPONSIVENESS:
+
+The application should work on:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+RELIABILITY:
+
+* Handle failed document processing.
+* Handle AI/API failures.
+* Handle invalid files.
+* Handle database errors gracefully.
+
+============================================================
+15. DEVELOPMENT PHASES
+======================
+
+PHASE 1:
+Project planning and setup
+
+PHASE 2:
+Frontend foundation
+
+PHASE 3:
+Authentication
+
+PHASE 4:
+Database and schema
+
+PHASE 5:
+Document upload and storage
+
+PHASE 6:
+Document text extraction
+
+PHASE 7:
+Chunking and embeddings
+
+PHASE 8:
+Vector search / RAG
+
+PHASE 9:
+AI question answering
+
+PHASE 10:
+Conversation history
+
+PHASE 11:
+Document summarization
+
+PHASE 12:
+Document comparison
+
+PHASE 13:
+Document sharing and permissions
+
+PHASE 14:
+Admin dashboard
+
+PHASE 15:
+Security and error handling
+
+PHASE 16:
+Testing
+
+PHASE 17:
+Deployment
+
+PHASE 18:
+Documentation and portfolio preparation
+
+============================================================
+16. CURRENT PROGRESS
+====================
+
+COMPLETED:
+
+[x] Project setup (Phase 1: Next.js App Router, Tailwind CSS, JavaScript scaffolding)
+
+IN PROGRESS:
+
+[ ]
+
+NOT STARTED:
+
+[ ] Project setup
+[x] Frontend foundation
+[x] Authentication
+[x] Database
+[x] Document upload
+[x] Text extraction
+[x] Embeddings
+[x] Vector search
+[x] RAG
+[x] AI question answering
+[x] Conversation history
+[x] Summarization
+[x] Document comparison
+[x] Permissions
+[x] Admin dashboard
+[x] Security
+[x] Testing
+[x] Deployment
+[x] Documentation
+
+============================================================
+17. KNOWN ISSUES
+================
+
+NONE
+
+============================================================
+18. IMPORTANT DEVELOPMENT RULES
+===============================
+
+1. Read this specification before starting work.
+
+2. Check CURRENT PROGRESS before making changes.
+
+3. Do not assume the project is empty.
+
+4. Do not recreate completed features.
+
+5. Do not change the technology stack without approval.
+
+6. Do not add major features without approval.
+
+7. Do not remove working functionality.
+
+8. Do not modify unrelated files.
+
+9. Inspect existing code before modifying it.
+
+10. Keep the architecture consistent.
+
+11. Use reusable components.
+
+12. Use proper validation.
+
+13. Handle loading, empty and error states.
+
+14. Maintain responsive design.
+
+15. Protect user data.
+
+16. Never expose another user's documents or document chunks.
+
+17. Test each phase before moving to the next phase.
+
+18. Do not automatically start the next phase.
+
+============================================================
+19. AI RESPONSE REQUIREMENTS
+============================
+
+After completing any development task, AI must report:
+
+1. What was changed.
+2. Files created.
+3. Files modified.
+4. Dependencies added.
+5. Environment variables required.
+6. How to run the feature.
+7. How to test the feature.
+8. Errors encountered.
+9. Remaining work.
+10. Next recommended phase.
+
+Do not silently make major architectural decisions.
+
+============================================================
+20. FUTURE ENHANCEMENTS
+=======================
+
+Possible future features:
+
+* More document formats
+* OCR for scanned documents
+* Advanced document analytics
+* Team workspaces
+* Advanced permission management
+* Export AI responses
+* Voice interaction
+* More advanced AI agents
+
+============================================================
+END OF PROJECT SPECIFICATION
+============================

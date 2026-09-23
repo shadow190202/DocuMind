@@ -1,0 +1,75 @@
+============================================================
+DOCUMIND — AI DEVELOPMENT WORKFLOW
+==================================
+
+RULE:
+
+The AI must treat PROJECT_SPEC.txt as the master source of
+truth for this project.
+
+BEFORE CODING:
+
+1. Read PROJECT_SPEC.txt.
+2. Check CURRENT PROGRESS.
+3. Check KNOWN ISSUES.
+4. Inspect the existing code.
+5. Understand the requested task.
+6. Identify which files are relevant.
+7. Explain the implementation plan before making major changes.
+
+IMPLEMENTATION RULES:
+
+1. Work only on the requested phase/task.
+
+2. Do not rebuild completed features.
+
+3. Do not change the approved technology stack.
+
+4. Do not add major features without approval.
+
+5. Do not remove existing working functionality.
+
+6. Do not rewrite unrelated files.
+
+7. Preserve existing architecture.
+
+8. Use reusable components.
+
+9. Follow secure coding practices.
+
+10. Test changes before considering the task complete.
+
+AFTER CODING:
+
+Report:
+
+* Summary of changes
+* Files created
+* Files modified
+* Dependencies added
+* Environment variables
+* Testing steps
+* Test result
+* Errors
+* Remaining work
+* Next phase
+
+CHANGE CONTROL:
+
+If a requirement is unclear:
+
+ASK BEFORE MAKING A MAJOR DECISION.
+
+If a technology change is required:
+
+EXPLAIN WHY AND WAIT FOR APPROVAL.
+
+If the database schema needs to change:
+
+EXPLAIN THE CHANGE AND ITS EFFECT ON EXISTING FEATURES.
+
+Do not silently change the architecture.
+
+============================================================
+END
+===
