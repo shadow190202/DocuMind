@@ -1,16 +1,27 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { documents } from "@/db/schema";
+import { documents, documentChunks } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getFile, saveExtractedData } from "@/lib/storage";
 import { extractTextFromDocument } from "@/lib/parsers";
+import { chunkDocument } from "@/lib/ai/chunker";
+import {
+  generateBatchEmbeddings,
+  EMBEDDING_MODEL,
+  EXPECTED_DIMENSIONS,
+} from "@/lib/ai/gemini";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/documents/:id/process
- * Triggers the text extraction pipeline for a specific document.
+ * End-to-end processing pipeline:
+ * 1. Extract text from file (PDF, DOCX, TXT, CSV)
+ * 2. Save extracted text payload to private storage
+ * 3. Chunk text recursively with grounding metadata
+ * 4. Generate & validate 768-dim embeddings via Gemini API (gemini-embedding-001)
+ * 5. Atomically replace chunks in PostgreSQL via db.transaction()
  */
 export async function POST(req, { params }) {
   try {
@@ -52,19 +63,17 @@ export async function POST(req, { params }) {
     try {
       fileBuffer = await getFile(doc.storageUrl);
     } catch (storageErr) {
+      const errMsg = `Storage retrieval failed: ${storageErr.message}`;
       await db
         .update(documents)
         .set({
           processingStatus: "failed",
-          errorMessage: `Storage retrieval failed: ${storageErr.message}`,
+          errorMessage: errMsg,
           updatedAt: new Date(),
         })
         .where(eq(documents.id, id));
 
-      return NextResponse.json(
-        { error: `Could not retrieve file from storage: ${storageErr.message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     // 4. Extract text using dedicated parser
@@ -73,20 +82,33 @@ export async function POST(req, { params }) {
       extractedResult = await extractTextFromDocument(fileBuffer, doc.fileType);
     } catch (extractErr) {
       console.error(`Text extraction failed for doc ${id}:`, extractErr);
+      const errMsg = `Text extraction error: ${extractErr.message}`;
 
       await db
         .update(documents)
         .set({
           processingStatus: "failed",
-          errorMessage: `Text extraction error: ${extractErr.message}`,
+          errorMessage: errMsg,
           updatedAt: new Date(),
         })
         .where(eq(documents.id, id));
 
-      return NextResponse.json(
-        { error: `Extraction failed: ${extractErr.message}` },
-        { status: 422 }
-      );
+      return NextResponse.json({ error: errMsg }, { status: 422 });
+    }
+
+    // Validate that extracted text is not empty
+    if (!extractedResult.text || extractedResult.text.trim().length === 0) {
+      const errMsg = "Extracted document text is empty. Cannot generate chunks or embeddings.";
+      await db
+        .update(documents)
+        .set({
+          processingStatus: "failed",
+          errorMessage: errMsg,
+          updatedAt: new Date(),
+        })
+        .where(eq(documents.id, id));
+
+      return NextResponse.json({ error: errMsg }, { status: 422 });
     }
 
     // 5. Save structured extracted data to isolated storage
@@ -103,29 +125,111 @@ export async function POST(req, { params }) {
 
     await saveExtractedData(extractedPayload, doc.id, userId);
 
-    // 6. Mark document as 'completed'
+    // 6. Divide text into semantic chunks
+    const chunks = chunkDocument(extractedResult);
+    if (!chunks || chunks.length === 0) {
+      const errMsg = "Chunking failed: no valid text segments could be created.";
+      await db
+        .update(documents)
+        .set({
+          processingStatus: "failed",
+          errorMessage: errMsg,
+          updatedAt: new Date(),
+        })
+        .where(eq(documents.id, id));
+
+      return NextResponse.json({ error: errMsg }, { status: 422 });
+    }
+
+    // 7. Generate vector embeddings via official Gemini API
+    // Must generate ALL embeddings and validate 768 dimensions BEFORE starting DB transaction
+    let embeddings = [];
+    try {
+      const chunkTexts = chunks.map((c) => c.content);
+      embeddings = await generateBatchEmbeddings(chunkTexts);
+
+      if (embeddings.length !== chunks.length) {
+        throw new Error(
+          `Embedding count mismatch: generated ${embeddings.length} embeddings for ${chunks.length} chunks.`
+        );
+      }
+
+      // Assert every embedding has length === 768
+      for (let i = 0; i < embeddings.length; i++) {
+        const emb = embeddings[i];
+        if (!Array.isArray(emb) || emb.length !== EXPECTED_DIMENSIONS) {
+          throw new Error(
+            `Chunk ${i} embedding failed dimension validation: expected ${EXPECTED_DIMENSIONS}, received ${emb?.length}.`
+          );
+        }
+      }
+    } catch (embeddingErr) {
+      console.error(`Embedding generation failed for doc ${id}:`, embeddingErr);
+      const errMsg = `Embedding generation error: ${embeddingErr.message}`;
+
+      // Mark document as failed, but PRESERVE existing database chunks
+      await db
+        .update(documents)
+        .set({
+          processingStatus: "failed",
+          errorMessage: errMsg,
+          updatedAt: new Date(),
+        })
+        .where(eq(documents.id, id));
+
+      return NextResponse.json({ error: errMsg }, { status: 502 });
+    }
+
+    // 8. Atomic Database Transaction: Delete old chunks & insert new chunks + embeddings
+    await db.transaction(async (tx) => {
+      // Delete existing chunks for this document
+      await tx
+        .delete(documentChunks)
+        .where(eq(documentChunks.documentId, id));
+
+      // Prepare records for batch insertion
+      const chunkRecords = chunks.map((chunk, index) => ({
+        documentId: doc.id,
+        chunkIndex: chunk.chunkIndex,
+        content: chunk.content,
+        pageNumber: chunk.pageNumber, // genuine number for PDF, null for DOCX/TXT/CSV
+        embedding: embeddings[index], // validated 768 float array
+        createdAt: new Date(),
+      }));
+
+      // Insert new chunks
+      await tx.insert(documentChunks).values(chunkRecords);
+
+      // Update document status to completed
+      await tx
+        .update(documents)
+        .set({
+          processingStatus: "completed",
+          errorMessage: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(documents.id, id));
+    });
+
+    // 9. Fetch and return updated document record
     const [updatedDoc] = await db
-      .update(documents)
-      .set({
-        processingStatus: "completed",
-        errorMessage: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(documents.id, id))
-      .returning();
+      .select()
+      .from(documents)
+      .where(eq(documents.id, id));
 
     return NextResponse.json({
       success: true,
-      message: "Document processed and text extracted successfully.",
+      message: "Document processed, chunked, and embedded successfully.",
       document: updatedDoc,
+      chunksCount: chunks.length,
+      embeddingModel: EMBEDDING_MODEL,
+      embeddingDimensions: EXPECTED_DIMENSIONS,
       metadata: extractedResult.metadata,
-      pageCount: extractedResult.pageCount,
-      preview: extractedResult.text.substring(0, 300),
     });
   } catch (error) {
-    console.error("POST /api/documents/:id/process error:", error);
+    console.error("POST /api/documents/:id/process unexpected error:", error);
     return NextResponse.json(
-      { error: "Internal server error during document processing." },
+      { error: `Internal server error during document processing: ${error.message}` },
       { status: 500 }
     );
   }

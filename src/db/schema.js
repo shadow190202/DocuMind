@@ -47,9 +47,10 @@ export const documentChunks = pgTable("document_chunks", {
   documentId: uuid("document_id")
     .notNull()
     .references(() => documents.id, { onDelete: "cascade" }),
+  chunkIndex: integer("chunk_index").default(0).notNull(),
   content: text("content").notNull(),
   pageNumber: integer("page_number"),
-  // 768 dimensions for Gemini text-embedding-004
+  // 768 dimensions for Gemini gemini-embedding-001
   embedding: vector("embedding", { dimensions: 768 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

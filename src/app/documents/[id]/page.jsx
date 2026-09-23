@@ -41,10 +41,11 @@ export default function DocumentDetailsPage() {
 
   const [document, setDocument] = useState(null);
   const [extracted, setExtracted] = useState(null);
+  const [chunksData, setChunksData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("full"); // "full" | "pages" | "metadata"
+  const [activeTab, setActiveTab] = useState("full"); // "full" | "pages" | "chunks" | "metadata"
   const [copied, setCopied] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -63,6 +64,16 @@ export default function DocumentDetailsPage() {
 
       setDocument(data.document);
       setExtracted(data.extracted);
+
+      try {
+        const cRes = await fetch(`/api/documents/${documentId}/chunks`);
+        if (cRes.ok) {
+          const cData = await cRes.json();
+          setChunksData(cData);
+        }
+      } catch (cErr) {
+        console.warn("Could not fetch chunks:", cErr);
+      }
     } catch (err) {
       console.error("Fetch error:", err);
       setError(err.message || "Failed to load document details.");
@@ -250,7 +261,7 @@ export default function DocumentDetailsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div className="space-y-1">
                       <span className="text-slate-400 flex items-center gap-1.5">
                         <HardDrive className="w-3.5 h-3.5" /> File Size
@@ -288,6 +299,17 @@ export default function DocumentDetailsPage() {
                           : "—"}
                       </p>
                     </div>
+
+                    <div className="space-y-1">
+                      <span className="text-slate-400 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-500" /> Vector Chunks
+                      </span>
+                      <p className="font-medium text-slate-800 dark:text-slate-200">
+                        {chunksData?.totalChunks !== undefined
+                          ? `${chunksData.totalChunks} Chunks`
+                          : "—"}
+                      </p>
+                    </div>
                   </div>
 
                   {document?.errorMessage && (
@@ -298,16 +320,18 @@ export default function DocumentDetailsPage() {
                 </CardContent>
               </Card>
 
-              {/* Extracted Text Section */}
+              {/* Extracted Text & Vector Chunks Section */}
               <Card>
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                   <div className="space-y-1">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-blue-600" /> Extracted Text Content
+                      <Sparkles className="w-4 h-4 text-blue-600" /> Document Intelligence & Embeddings
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      {extracted
-                        ? `Extracted text ready for Phase 7 chunking and vector embeddings.`
+                      {chunksData?.totalChunks
+                        ? `${chunksData.totalChunks} semantic chunks with 768-dimensional Gemini embeddings indexed in PostgreSQL.`
+                        : extracted
+                        ? "Text extracted; ready for vector embeddings."
                         : "No text has been extracted from this document yet."}
                     </CardDescription>
                   </div>
@@ -335,6 +359,16 @@ export default function DocumentDetailsPage() {
                           }`}
                         >
                           By Page ({extracted.pages?.length || 0})
+                        </button>
+                        <button
+                          onClick={() => setActiveTab("chunks")}
+                          className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                            activeTab === "chunks"
+                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          Chunks & Vectors ({chunksData?.totalChunks || 0})
                         </button>
                         <button
                           onClick={() => setActiveTab("metadata")}
@@ -436,6 +470,47 @@ export default function DocumentDetailsPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  ) : activeTab === "chunks" ? (
+                    <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1">
+                      {!chunksData?.chunks || chunksData.chunks.length === 0 ? (
+                        <div className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                          <p className="text-xs text-slate-500">
+                            No vector chunks available. Click &quot;Re-extract Text&quot; or &quot;Process Document&quot; to generate chunks and 768-dim embeddings.
+                          </p>
+                        </div>
+                      ) : (
+                        chunksData.chunks.map((chunk) => (
+                          <div
+                            key={chunk.id}
+                            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs"
+                          >
+                            <div className="bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                  Chunk #{chunk.chunkIndex + 1}
+                                </span>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {chunk.pageNumber !== null ? `Page ${chunk.pageNumber}` : "Document Content"}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                                <span>{chunk.characterCount} chars</span>
+                                <span>•</span>
+                                <span>~{chunk.estimatedTokenCount} tokens (est.)</span>
+                                <span>•</span>
+                                <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1">
+                                  <Check className="w-2.5 h-2.5" />
+                                  768-dim vector
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed select-text">
+                              {chunk.content}
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   ) : (
                     <div className="rounded-xl bg-slate-900 p-5 font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">

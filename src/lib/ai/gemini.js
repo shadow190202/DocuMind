@@ -1,0 +1,151 @@
+import { GoogleGenAI } from "@google/genai";
+
+/**
+ * Gemini Embedding Client
+ *
+ * Exclusively uses the currently supported official text embedding model:
+ * 'gemini-embedding-001' with outputDimensionality: 768.
+ *
+ * Invariants:
+ * - 100% genuine embeddings generated via Gemini API; zero fake/mock vectors.
+ * - Asserts every embedding vector has length === 768 before returning.
+ * - Requires GEMINI_API_KEY in environment variables.
+ * - Retries transient 429/network errors with exponential backoff.
+ * - Fails immediately on auth/client errors without useless retries.
+ */
+
+export const EMBEDDING_MODEL = "gemini-embedding-001";
+export const EXPECTED_DIMENSIONS = 768;
+export const DEFAULT_EMBEDDING_BATCH_SIZE = parseInt(
+  process.env.EMBEDDING_BATCH_SIZE || "20",
+  10
+);
+
+/**
+ * Helper to sleep for ms.
+ */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Checks if an error is transient (e.g. rate limit 429, temporary server error 503/500, network drop)
+ */
+function isTransientError(error) {
+  if (!error) return false;
+  const status = error.status || error.statusCode || error.code;
+  const msg = (error.message || "").toLowerCase();
+
+  if (status === 429 || msg.includes("rate limit") || msg.includes("resource_exhausted")) {
+    return true;
+  }
+  if (status === 503 || status === 500 || status === 502) {
+    return true;
+  }
+  if (msg.includes("econnreset") || msg.includes("etimedout") || msg.includes("fetch failed")) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Returns an initialized GoogleGenAI instance.
+ * Throws immediately if GEMINI_API_KEY is not configured.
+ */
+function getGenAIClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured in environment variables. A valid Gemini API key is required to generate real 768-dimensional embeddings."
+    );
+  }
+  return new GoogleGenAI({ apiKey: apiKey.trim() });
+}
+
+/**
+ * Generates an embedding for a single text chunk with strict 768-dimension validation.
+ *
+ * @param {string} text - Clean chunk text
+ * @returns {Promise<number[]>} - Array of exactly 768 float values
+ */
+export async function generateEmbedding(text) {
+  if (!text || typeof text !== "string" || text.trim().length === 0) {
+    throw new Error("Cannot generate embedding for empty text content.");
+  }
+
+  const ai = getGenAIClient();
+  const maxRetries = 3;
+  let delay = 1000;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: text,
+        config: {
+          outputDimensionality: EXPECTED_DIMENSIONS,
+        },
+      });
+
+      const embeddingValues = response?.embeddings?.[0]?.values;
+
+      if (!Array.isArray(embeddingValues)) {
+        throw new Error("Invalid response format from Gemini API: missing embedding values.");
+      }
+
+      if (embeddingValues.length !== EXPECTED_DIMENSIONS) {
+        throw new Error(
+          `Embedding dimension mismatch: expected ${EXPECTED_DIMENSIONS}, got ${embeddingValues.length} from model ${EMBEDDING_MODEL}.`
+        );
+      }
+
+      return embeddingValues;
+    } catch (err) {
+      // Abort immediately on non-transient auth/client errors
+      if (!isTransientError(err) || attempt === maxRetries) {
+        throw new Error(`Gemini embedding generation failed: ${err.message}`);
+      }
+
+      console.warn(
+        `Transient Gemini API error (attempt ${attempt}/${maxRetries}): ${err.message}. Retrying in ${delay}ms...`
+      );
+      await sleep(delay);
+      delay *= 2;
+    }
+  }
+}
+
+/**
+ * Generates embeddings for an array of text chunks using configurable batching.
+ *
+ * @param {string[]} texts - Array of chunk text strings
+ * @param {Object} [options] - Batch options
+ * @param {number} [options.batchSize] - Custom batch size (defaults to EMBEDDING_BATCH_SIZE)
+ * @returns {Promise<Array<number[]>>} - Array of 768-dimensional embedding arrays
+ */
+export async function generateBatchEmbeddings(texts, options = {}) {
+  if (!Array.isArray(texts) || texts.length === 0) {
+    return [];
+  }
+
+  const batchSize = options.batchSize || DEFAULT_EMBEDDING_BATCH_SIZE;
+  const allEmbeddings = [];
+
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+
+    // Process chunks within batch concurrently with individual retries
+    const batchPromises = batch.map((chunkText) => generateEmbedding(chunkText));
+    const batchResults = await Promise.all(batchPromises);
+
+    // Validate every single embedding in the batch
+    for (const emb of batchResults) {
+      if (!Array.isArray(emb) || emb.length !== EXPECTED_DIMENSIONS) {
+        throw new Error(
+          `Batch validation failed: embedding dimension is ${emb?.length}, expected ${EXPECTED_DIMENSIONS}.`
+        );
+      }
+      allEmbeddings.push(emb);
+    }
+  }
+
+  return allEmbeddings;
+}

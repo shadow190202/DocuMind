@@ -560,6 +560,7 @@ COMPLETED:
 [x] Database (Phase 4: PostgreSQL + pgvector + Drizzle ORM schema & migrations)
 [x] Document upload (Phase 5: Secure file storage, Zod validation, and upload pipeline)
 [x] Text extraction (Phase 6: Multi-format parsing pipeline for PDF, DOCX, TXT, CSV, storage synchronization, and Document Details preview)
+[x] Chunking and embeddings (Phase 7: Recursive semantic chunking, Gemini gemini-embedding-001 768-dim vector generation, pgvector storage with chunk_index, atomic transactions, and inspection UI)
 
 IN PROGRESS:
 
@@ -573,7 +574,7 @@ NOT STARTED:
 [ ] Database
 [ ] Document upload
 [ ] Text extraction
-[x] Embeddings
+[ ] Embeddings
 [x] Vector search
 [x] RAG
 [x] AI question answering
