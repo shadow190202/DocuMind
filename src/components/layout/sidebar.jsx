@@ -15,8 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   HardDrive,
-  ExternalLink,
 } from "lucide-react";
+import { UserButton, SignedIn } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -153,6 +153,15 @@ export function Sidebar({ className }) {
           <HardDrive className="w-5 h-5" />
         </div>
       )}
+
+      {/* Authenticated User Status Footer */}
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+        <SignedIn>
+          <div className={cn("flex items-center gap-3", collapsed ? "justify-center" : "px-2 py-1")}>
+            <UserButton afterSignOutUrl="/" showName={!collapsed} />
+          </div>
+        </SignedIn>
+      </div>
     </aside>
   );
 }

@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Sparkles, Menu, X, FileText, Bot, ArrowRight, Github } from "lucide-react";
+import { Sparkles, Menu, X, ArrowRight, LayoutDashboard } from "lucide-react";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
 export function Navbar({ onOpenDemoModal }) {
@@ -37,26 +38,51 @@ export function Navbar({ onOpenDemoModal }) {
           </a>
         </nav>
 
-        {/* Action Buttons */}
+        {/* Action Buttons with Clerk Auth State */}
         <div className="hidden md:flex items-center gap-3">
           {onOpenDemoModal && (
             <Button variant="ghost" size="sm" onClick={onOpenDemoModal}>
               Preview Modal
             </Button>
           )}
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/sign-in">Sign In</Link>
-          </Button>
-          <Button size="sm" className="gap-1.5 shadow-sm" asChild>
-            <Link href="/dashboard">
-              Launch App
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </Button>
+
+          {/* Shown when user is logged out */}
+          <SignedOut>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/sign-in">Sign In</Link>
+            </Button>
+            <Button size="sm" className="gap-1.5 shadow-sm" asChild>
+              <Link href="/sign-up">
+                Get Started
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+          </SignedOut>
+
+          {/* Shown when user is logged in */}
+          <SignedIn>
+            <Button size="sm" variant="outline" className="gap-1.5" asChild>
+              <Link href="/dashboard">
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+            </Button>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "h-9 w-9",
+                },
+              }}
+            />
+          </SignedIn>
         </div>
 
         {/* Mobile Hamburger Toggle */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-3">
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -103,15 +129,27 @@ export function Navbar({ onOpenDemoModal }) {
           </nav>
 
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
-            <Button variant="outline" className="w-full justify-center" asChild>
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
-            <Button className="w-full justify-center gap-1.5" asChild>
-              <Link href="/dashboard">
-                Launch App
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
+            <SignedOut>
+              <Button variant="outline" className="w-full justify-center" asChild>
+                <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
+                  Sign In
+                </Link>
+              </Button>
+              <Button className="w-full justify-center gap-1.5" asChild>
+                <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </SignedOut>
+            <SignedIn>
+              <Button className="w-full justify-center gap-1.5" asChild>
+                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              </Button>
+            </SignedIn>
           </div>
         </div>
       )}
