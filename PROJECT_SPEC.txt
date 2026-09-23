@@ -557,6 +557,7 @@ COMPLETED:
 [x] Project setup (Phase 1: Next.js App Router, Tailwind CSS, JavaScript scaffolding)
 [x] Frontend foundation (Phase 2: Reusable UI components, application layout, public landing page)
 [x] Authentication (Phase 3: Clerk authentication, route protection middleware, and auth flows)
+[x] Database (Phase 4: PostgreSQL + pgvector + Drizzle ORM schema & migrations)
 
 IN PROGRESS:
 
@@ -567,7 +568,7 @@ NOT STARTED:
 [ ] Project setup
 [ ] Frontend foundation
 [ ] Authentication
-[x] Database
+[ ] Database
 [x] Document upload
 [x] Text extraction
 [x] Embeddings
