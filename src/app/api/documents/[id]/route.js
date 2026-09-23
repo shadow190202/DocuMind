@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { deleteFile } from "@/lib/storage";
+import { deleteFile, deleteExtractedData } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +70,7 @@ export async function DELETE(req, { params }) {
     if (doc.storageUrl) {
       await deleteFile(doc.storageUrl);
     }
+    await deleteExtractedData(id, userId);
 
     // Delete from database (cascades to chunks and permissions)
     await db.delete(documents).where(eq(documents.id, id));

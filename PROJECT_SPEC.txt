@@ -559,6 +559,7 @@ COMPLETED:
 [x] Authentication (Phase 3: Clerk authentication, route protection middleware, and auth flows)
 [x] Database (Phase 4: PostgreSQL + pgvector + Drizzle ORM schema & migrations)
 [x] Document upload (Phase 5: Secure file storage, Zod validation, and upload pipeline)
+[x] Text extraction (Phase 6: Multi-format parsing pipeline for PDF, DOCX, TXT, CSV, storage synchronization, and Document Details preview)
 
 IN PROGRESS:
 
@@ -571,7 +572,7 @@ NOT STARTED:
 [ ] Authentication
 [ ] Database
 [ ] Document upload
-[x] Text extraction
+[ ] Text extraction
 [x] Embeddings
 [x] Vector search
 [x] RAG

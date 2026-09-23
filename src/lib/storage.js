@@ -93,3 +93,67 @@ export async function deleteFile(storageUrl) {
 
   return false;
 }
+
+// Storage root for parsed and extracted text metadata
+const EXTRACTED_ROOT = path.resolve(process.cwd(), "storage", "extracted");
+
+/**
+ * Saves extracted document text and metadata.
+ * @param {Object} data - Extracted data object
+ * @param {string} documentId - Document UUID
+ * @param {string} userId - Clerk user ID
+ * @returns {Promise<string>} - Absolute path to stored JSON
+ */
+export async function saveExtractedData(data, documentId, userId) {
+  const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const userDir = path.join(EXTRACTED_ROOT, sanitizedUserId);
+  ensureDirectory(userDir);
+
+  const filePath = path.join(userDir, `${documentId}.json`);
+  await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+  return filePath;
+}
+
+/**
+ * Retrieves extracted document data for a document.
+ * @param {string} documentId - Document UUID
+ * @param {string} userId - Clerk user ID
+ * @returns {Promise<Object|null>} - Parsed extracted data or null
+ */
+export async function getExtractedData(documentId, userId) {
+  const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const filePath = path.join(EXTRACTED_ROOT, sanitizedUserId, `${documentId}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+
+  const raw = await fs.promises.readFile(filePath, "utf8");
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deletes extracted document data for a document.
+ * @param {string} documentId - Document UUID
+ * @param {string} userId - Clerk user ID
+ * @returns {Promise<boolean>}
+ */
+export async function deleteExtractedData(documentId, userId) {
+  try {
+    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filePath = path.join(EXTRACTED_ROOT, sanitizedUserId, `${documentId}.json`);
+
+    if (fs.existsSync(filePath)) {
+      await fs.promises.unlink(filePath);
+      return true;
+    }
+  } catch (error) {
+    console.error("Failed to delete extracted data from storage:", error);
+  }
+  return false;
+}
+

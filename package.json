@@ -15,9 +15,12 @@
   "dependencies": {
     "@clerk/nextjs": "^6.39.7",
     "clsx": "^2.1.1",
+    "csv-parse": "^7.0.2",
     "drizzle-orm": "^0.45.3",
     "lucide-react": "^0.460.0",
+    "mammoth": "^1.12.3",
     "next": "^14.2.15",
+    "pdf-parse": "^2.4.5",
     "postgres": "^3.4.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

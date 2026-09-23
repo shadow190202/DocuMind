@@ -12,6 +12,8 @@ import {
   AlertCircle,
   Loader2,
   ExternalLink,
+  Eye,
+  RefreshCw,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,41 @@ export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [docToDelete, setDocToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
+
+  const handleProcess = async (docId, e) => {
+    if (e) e.stopPropagation();
+    try {
+      setProcessingId(docId);
+      const res = await fetch(`/api/documents/${docId}/process`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to process document.");
+      }
+      // Update local state
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === docId
+            ? { ...d, processingStatus: "completed", errorMessage: null }
+            : d
+        )
+      );
+    } catch (err) {
+      console.error("Process error:", err);
+      alert(err.message || "Failed to process document.");
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === docId
+            ? { ...d, processingStatus: "failed", errorMessage: err.message }
+            : d
+        )
+      );
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -221,9 +258,12 @@ export default function DocumentsPage() {
                               <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 shrink-0">
                                 <FileText className="w-4 h-4" />
                               </div>
-                              <span className="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-xs block">
+                              <Link
+                                href={`/documents/${doc.id}`}
+                                className="font-semibold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-xs block transition-colors"
+                              >
                                 {doc.filename}
-                              </span>
+                              </Link>
                             </div>
                           </td>
                           <td className="py-3.5 pr-4">
@@ -240,7 +280,36 @@ export default function DocumentsPage() {
                           <td className="py-3.5 pr-4 text-xs text-slate-500">
                             {formatDate(doc.createdAt)}
                           </td>
-                          <td className="py-3.5 text-right space-x-2">
+                          <td className="py-3.5 text-right space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                              title="View Document & Extracted Text"
+                            >
+                              <Link href={`/documents/${doc.id}`}>
+                                <Eye className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                              onClick={(e) => handleProcess(doc.id, e)}
+                              disabled={processingId === doc.id}
+                              title={
+                                doc.processingStatus === "completed"
+                                  ? "Re-extract Text"
+                                  : "Extract / Process Document"
+                              }
+                            >
+                              {processingId === doc.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4" />
+                              )}
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
