@@ -13,6 +13,9 @@
 /out/
 /build
 
+# Local file storage for uploaded documents
+/storage
+
 # Production
 /dist
 

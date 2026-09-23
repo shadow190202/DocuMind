@@ -558,6 +558,7 @@ COMPLETED:
 [x] Frontend foundation (Phase 2: Reusable UI components, application layout, public landing page)
 [x] Authentication (Phase 3: Clerk authentication, route protection middleware, and auth flows)
 [x] Database (Phase 4: PostgreSQL + pgvector + Drizzle ORM schema & migrations)
+[x] Document upload (Phase 5: Secure file storage, Zod validation, and upload pipeline)
 
 IN PROGRESS:
 
@@ -569,7 +570,7 @@ NOT STARTED:
 [ ] Frontend foundation
 [ ] Authentication
 [ ] Database
-[x] Document upload
+[ ] Document upload
 [x] Text extraction
 [x] Embeddings
 [x] Vector search
