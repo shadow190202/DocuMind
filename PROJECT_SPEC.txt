@@ -555,6 +555,7 @@ Documentation and portfolio preparation
 COMPLETED:
 
 [x] Project setup (Phase 1: Next.js App Router, Tailwind CSS, JavaScript scaffolding)
+[x] Frontend foundation (Phase 2: Reusable UI components, application layout, public landing page)
 
 IN PROGRESS:
 
@@ -563,7 +564,7 @@ IN PROGRESS:
 NOT STARTED:
 
 [ ] Project setup
-[x] Frontend foundation
+[ ] Frontend foundation
 [x] Authentication
 [x] Database
 [x] Document upload
