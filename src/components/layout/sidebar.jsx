@@ -8,6 +8,7 @@ import {
   FileText,
   Upload,
   MessageSquare,
+  History,
   GitCompare,
   User,
   Shield,
@@ -26,6 +27,7 @@ const navigationItems = [
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Upload Document", href: "/documents/upload", icon: Upload },
   { label: "AI Chat & Q&A", href: "/chat", icon: MessageSquare },
+  { label: "Conversations", href: "/conversations", icon: History },
   { label: "Compare Documents", href: "/compare", icon: GitCompare },
   { label: "Profile", href: "/profile", icon: User },
 ];

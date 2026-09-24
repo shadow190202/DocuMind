@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +20,17 @@ import {
   ChevronUp,
   FileText,
   SlidersHorizontal,
+  Edit3,
+  Download,
+  HardDrive,
 } from "lucide-react";
+import { RenameModal } from "@/components/conversations/rename-modal";
+import { DeleteModal } from "@/components/conversations/delete-modal";
 
-export default function ChatPage() {
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const urlConvId = searchParams.get("id") || searchParams.get("conversationId");
+
   const [conversationsList, setConversationsList] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -35,6 +44,11 @@ export default function ChatPage() {
   const [topK, setTopK] = useState(5);
   const [threshold, setThreshold] = useState(0.5);
   const [expandedSources, setExpandedSources] = useState({});
+
+  // Modals & Export state
+  const [renameTarget, setRenameTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // 1. Fetch user's completed documents for scope filter
   const fetchDocuments = async () => {
@@ -75,6 +89,7 @@ export default function ChatPage() {
 
   // 3. Load active conversation messages
   const selectConversation = async (convId) => {
+    if (!convId) return;
     setActiveConversationId(convId);
     setError(null);
     try {
@@ -94,33 +109,23 @@ export default function ChatPage() {
     }
   };
 
+  // 3b. Deep linking support: load conversation from URL parameter
+  useEffect(() => {
+    if (urlConvId && urlConvId !== activeConversationId) {
+      selectConversation(urlConvId);
+    }
+  }, [urlConvId]);
+
   // 4. Start a new conversation
   const startNewChat = () => {
     setActiveConversationId(null);
     setMessages([]);
     setError(null);
     setQuestion("");
+    setShowExportMenu(false);
   };
 
-  // 5. Delete a conversation
-  const handleDeleteConversation = async (convId, e) => {
-    if (e) e.stopPropagation();
-    try {
-      const res = await fetch(`/api/conversations/${convId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setConversationsList((prev) => prev.filter((c) => c.id !== convId));
-        if (activeConversationId === convId) {
-          startNewChat();
-        }
-      }
-    } catch (err) {
-      console.error("Could not delete conversation:", err);
-    }
-  };
-
-  // 6. Submit question to /api/chat
+  // 5. Submit question to /api/chat
   const handleAsk = async (overrideQ) => {
     const q = (typeof overrideQ === "string" ? overrideQ : question).trim();
     if (!q || loading) return;
@@ -199,40 +204,54 @@ export default function ChatPage() {
     }));
   };
 
+  // Find active conversation details
+  const activeConv = conversationsList.find((c) => c.id === activeConversationId);
+
+  const handleRenameSuccess = (updated) => {
+    setConversationsList((prev) =>
+      prev.map((c) => (c.id === updated.id ? { ...c, title: updated.title } : c))
+    );
+  };
+
+  const handleDeleteSuccess = (deletedId) => {
+    setConversationsList((prev) => prev.filter((c) => c.id !== deletedId));
+    if (activeConversationId === deletedId) {
+      startNewChat();
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Universal Sidebar */}
       <Sidebar />
 
-      {/* Main Workspace Layout */}
+      {/* Main Chat Interface */}
       <div className="flex-1 flex min-w-0 overflow-hidden">
-        {/* Left Conversations Panel */}
-        <div className="w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex flex-col hidden md:flex">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Conversations
-              </h2>
-            </div>
+        {/* Left Sub-Sidebar: Conversations Thread List */}
+        <div className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 hidden md:flex">
+          {/* Action Header */}
+          <div className="p-3 border-b border-slate-200 dark:border-slate-800">
             <Button
+              onClick={startNewChat}
               variant="outline"
               size="sm"
-              onClick={startNewChat}
-              className="h-7 text-xs gap-1 px-2 shadow-2xs"
+              className="w-full justify-start gap-2 shadow-sm font-medium text-xs"
             >
-              <Plus className="w-3.5 h-3.5" />
-              New
+              <Plus className="w-4 h-4 text-blue-600" />
+              New Chat
             </Button>
           </div>
 
+          {/* Conversations History Scrollable Area */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {loadingConv ? (
-              <div className="py-8 text-center">
-                <Loader2 className="w-4 h-4 text-slate-400 animate-spin mx-auto" />
-              </div>
-            ) : conversationsList.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400 px-4">
-                No past conversations. Start a new chat below!
+            <div className="px-2 py-1 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span>Recent Chats</span>
+              {loadingConv && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+            </div>
+
+            {conversationsList.length === 0 && !loadingConv ? (
+              <div className="text-center py-8 px-3 text-slate-400 text-xs">
+                No past conversations yet.
               </div>
             ) : (
               conversationsList.map((conv) => (
@@ -251,12 +270,29 @@ export default function ChatPage() {
                       {conv.documentName ? conv.documentName : "Vault-Wide"}
                     </span>
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteConversation(conv.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-red-600 transition-opacity"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenameTarget(conv);
+                      }}
+                      title="Rename conversation"
+                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(conv);
+                      }}
+                      title="Delete conversation"
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -267,35 +303,88 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
           {/* Header */}
           <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 truncate">
+            <div className="flex items-center gap-3 truncate min-w-0">
               <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
               </div>
-              <div className="truncate">
-                <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                  Vault-Wide Knowledge Assistant
-                </h1>
+              <div className="truncate min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {activeConv ? activeConv.title : "Vault-Wide Knowledge Assistant"}
+                  </h1>
+                  {activeConv && (
+                    <button
+                      onClick={() => setRenameTarget(activeConv)}
+                      title="Rename conversation"
+                      className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
                 <p className="text-[11px] text-slate-500 truncate">
-                  Grounded Q&A powered by Gemini 2.5 Flash & pgvector retrieval
+                  {activeConv?.documentName
+                    ? `Scoped to ${activeConv.documentName}`
+                    : "Grounded Q&A powered by Gemini 2.5 Flash & pgvector retrieval"}
                 </p>
               </div>
             </div>
 
-            {/* Scope Filter Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 hidden sm:inline">Scope:</span>
-              <select
-                value={selectedDocId}
-                onChange={(e) => setSelectedDocId(e.target.value)}
-                className="h-8 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 max-w-[180px] truncate"
-              >
-                <option value="">Entire Document Vault</option>
-                {documentsList.map((doc) => (
-                  <option key={doc.id} value={doc.id}>
-                    {doc.filename}
-                  </option>
-                ))}
-              </select>
+            {/* Header Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              {activeConversationId && (
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+
+                  {showExportMenu && (
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg py-1 z-20 text-xs animate-in fade-in duration-100">
+                      <button
+                        onClick={() => {
+                          setShowExportMenu(false);
+                          window.location.href = `/api/conversations/${activeConversationId}/export?format=markdown`;
+                        }}
+                        className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                      >
+                        <span>Markdown (.md)</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowExportMenu(false);
+                          window.location.href = `/api/conversations/${activeConversationId}/export?format=json`;
+                        }}
+                        className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                      >
+                        <span>JSON (.json)</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Scope Filter Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500 hidden sm:inline">Scope:</span>
+                <select
+                  value={selectedDocId}
+                  onChange={(e) => setSelectedDocId(e.target.value)}
+                  className="h-8 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 max-w-[180px] truncate"
+                >
+                  <option value="">Entire Document Vault</option>
+                  {documentsList.map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.filename}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </header>
 
@@ -318,205 +407,190 @@ export default function ChatPage() {
                 {/* Suggested Starters */}
                 <div className="pt-2 flex flex-col gap-2 text-left">
                   {[
-                    "What are the key themes and findings across my documents?",
-                    "Summarize recent financial or strategic projections.",
-                    "What policy or operational guidelines are established?",
+                    "What are the main key points discussed across these documents?",
+                    "Summarize the major findings and metrics reported.",
+                    "Are there any conflicting requirements or numbers mentioned?",
                   ].map((starter, i) => (
                     <button
                       key={i}
                       onClick={() => handleAsk(starter)}
-                      className="text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors shadow-2xs"
+                      className="p-3 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-600 transition-colors shadow-sm text-left flex items-center justify-between"
                     >
-                      {starter}
+                      <span className="truncate">{starter}</span>
+                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-blue-500 ml-2" />
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
-              messages.map((msg, idx) => (
-                <div
-                  key={msg.id || idx}
-                  className={`flex flex-col ${
-                    msg.role === "user" ? "items-end" : "items-start"
-                  }`}
-                >
+              messages.map((msg) => {
+                const isUser = msg.role === "user";
+                return (
                   <div
-                    className={`max-w-[85%] rounded-2xl p-4 text-xs ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-xs shadow-xs"
-                        : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-xs shadow-xs"
-                    }`}
+                    key={msg.id}
+                    className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                   >
-                    <div className="flex items-center gap-1.5 mb-1.5 opacity-80 text-[10px] font-semibold">
-                      {msg.role === "user" ? (
-                        <>
-                          <User className="w-3 h-3" />
-                          <span>You</span>
-                        </>
-                      ) : (
-                        <>
-                          <Bot className="w-3.5 h-3.5 text-blue-500" />
-                          <span>DocuMind Assistant</span>
-                        </>
+                    {!isUser && (
+                      <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                    )}
+
+                    <div
+                      className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed space-y-3 shadow-sm ${
+                        isUser
+                          ? "bg-blue-600 text-white rounded-tr-sm"
+                          : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm"
+                      }`}
+                    >
+                      {/* Message Content Body */}
+                      <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+
+                      {/* Source Citations Accordion (Assistant Only) */}
+                      {!isUser && Array.isArray(msg.sources) && msg.sources.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-blue-500" />
+                            Grounded Sources ({msg.sources.length}):
+                          </p>
+
+                          <div className="space-y-1.5">
+                            {msg.sources.map((src) => {
+                              const isExpanded =
+                                expandedSources[`${msg.id}-${src.sourceNumber}`];
+                              return (
+                                <div
+                                  key={src.sourceNumber}
+                                  className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-2.5 text-[11px]"
+                                >
+                                  <div
+                                    onClick={() => toggleSource(msg.id, src.sourceNumber)}
+                                    className="flex items-center justify-between cursor-pointer font-medium text-slate-700 dark:text-slate-300"
+                                  >
+                                    <div className="flex items-center gap-2 truncate">
+                                      <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                        SOURCE {src.sourceNumber}
+                                      </Badge>
+                                      <span className="truncate">{src.documentName}</span>
+                                      {src.pageNumber && (
+                                        <span className="text-slate-400">
+                                          (Page {src.pageNumber})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <Badge variant="outline" className="text-[10px] py-0">
+                                        {Math.round(src.similarityScore * 100)}% match
+                                      </Badge>
+                                      {isExpanded ? (
+                                        <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                                      ) : (
+                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {isExpanded && src.chunkContent && (
+                                    <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60 text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-mono text-[10.5px] leading-normal bg-white dark:bg-slate-900 p-2 rounded">
+                                      {src.chunkContent}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    <div className="whitespace-pre-wrap leading-relaxed select-text font-sans">
-                      {msg.content}
-                    </div>
-
-                    {/* Sources Citations */}
-                    {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                        <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-blue-500" />
-                          <span>
-                            Grounded in {msg.sources.length} document source
-                            {msg.sources.length === 1 ? "" : "s"}:
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          {msg.sources.map((src) => {
-                            const isExp =
-                              expandedSources[`${msg.id}-${src.sourceNumber}`];
-                            return (
-                              <div
-                                key={src.sourceNumber}
-                                className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-[11px] overflow-hidden"
-                              >
-                                <div
-                                  onClick={() =>
-                                    toggleSource(msg.id, src.sourceNumber)
-                                  }
-                                  className="p-2 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
-                                >
-                                  <div className="flex items-center gap-2 truncate">
-                                    <Badge
-                                      variant="default"
-                                      className="text-[10px] py-0 px-1.5 bg-blue-600 text-white font-mono"
-                                    >
-                                      SOURCE {src.sourceNumber}
-                                    </Badge>
-                                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
-                                      {src.documentName}
-                                    </span>
-                                    <span className="text-slate-400 text-[10px]">
-                                      {src.pageNumber !== null
-                                        ? `Page ${src.pageNumber}`
-                                        : "General Section"}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[10px] py-0"
-                                    >
-                                      {(src.similarityScore * 100).toFixed(1)}% Match
-                                    </Badge>
-                                    {isExp ? (
-                                      <ChevronUp className="w-3 h-3 text-slate-400" />
-                                    ) : (
-                                      <ChevronDown className="w-3 h-3 text-slate-400" />
-                                    )}
-                                  </div>
-                                </div>
-                                {isExp && (
-                                  <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 font-mono text-[10px] text-slate-600 dark:text-slate-400 whitespace-pre-wrap select-text leading-relaxed">
-                                    {src.content || "(Grounded passage excerpt)"}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                    {isUser && (
+                      <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0 mt-0.5">
+                        <User className="w-4 h-4" />
                       </div>
                     )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
 
+            {/* Loading Indicator */}
             {loading && (
-              <div className="flex items-start gap-2">
-                <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 rounded-bl-xs shadow-xs flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                  <span>Synthesizing grounded answer with Gemini 2.5 Flash...</span>
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <Bot className="w-4 h-4" />
                 </div>
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 flex items-center gap-2 shadow-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  Generating grounded answer with citations...
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>{error}</div>
               </div>
             )}
           </div>
 
-          {/* Error Banner */}
-          {error && (
-            <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Input Bar & Controls */}
-          <div className="p-4 md:p-6 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-            <div className="max-w-4xl mx-auto w-full space-y-3">
+          {/* Bottom Chat Input Bar & Tuning Controls */}
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+            <div className="max-w-4xl mx-auto space-y-3">
+              {/* Question Input Form */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleAsk();
                 }}
-                className="flex gap-2"
+                className="flex items-center gap-2"
               >
                 <Input
-                  placeholder={
-                    selectedDocId
-                      ? "Ask a question about selected document..."
-                      : "Ask anything across your entire document vault..."
-                  }
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
+                  placeholder={
+                    selectedDocId
+                      ? "Ask a question about this document..."
+                      : "Ask any question across your entire document vault..."
+                  }
                   disabled={loading}
-                  className="h-11 text-xs"
+                  className="flex-1 text-xs"
                 />
-                <Button
-                  type="submit"
-                  disabled={loading || !question.trim()}
-                  className="h-11 px-5 gap-2 shrink-0 shadow-sm"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Ask AI</span>
-                    </>
-                  )}
+                <Button type="submit" disabled={loading || !question.trim()} size="sm" className="gap-1.5">
+                  <Send className="w-3.5 h-3.5" />
+                  Ask AI
                 </Button>
               </form>
 
-              {/* Controls Footer */}
-              <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
-                <div className="flex items-center gap-4 flex-wrap">
+              {/* RAG Parameter Tuning Bar */}
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-3 pt-1">
+                <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3 h-3 text-slate-500" />
                     <span>Top-K:</span>
-                    <select
-                      value={topK}
-                      onChange={(e) => setTopK(Number(e.target.value))}
-                      className="h-6 text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1.5"
-                    >
-                      <option value={3}>3</option>
-                      <option value={5}>5</option>
-                      <option value={10}>10</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span>Min Score:</span>
                     <input
                       type="range"
-                      min="0.0"
-                      max="1.0"
+                      min="1"
+                      max="10"
+                      value={topK}
+                      onChange={(e) => setTopK(e.target.value)}
+                      className="w-16 h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                      {topK}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span>Threshold:</span>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="0.9"
                       step="0.05"
                       value={threshold}
-                      onChange={(e) => setThreshold(Number(e.target.value))}
+                      onChange={(e) => setThreshold(e.target.value)}
                       className="w-16 h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                     <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
@@ -532,6 +606,36 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* Rename Modal */}
+      <RenameModal
+        isOpen={Boolean(renameTarget)}
+        onClose={() => setRenameTarget(null)}
+        conversation={renameTarget}
+        onSuccess={handleRenameSuccess}
+      />
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        conversation={deleteTarget}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        </div>
+      }
+    >
+      <ChatContent />
+    </Suspense>
   );
 }

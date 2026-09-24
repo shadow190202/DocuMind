@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { conversations, documents } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { conversations, messages, documents } from "@/db/schema";
+import { eq, and, sql, count, ilike, gte, asc, desc } from "drizzle-orm";
+import { listConversationsQuerySchema } from "@/lib/validations/conversation";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/conversations
- * Lists conversations for the authenticated user.
- * Optional query parameter: ?documentId=<uuid>
+ * Lists conversations for the authenticated user with server-side:
+ * - Search by title
+ * - Date range filtering (24h, 7d, 30d, all)
+ * - Sorting (recent, oldest, most_questions, title)
+ * - Pagination (limit, offset)
+ * - Aggregated message count, question count, and latest message snippet
+ *
+ * Invariants:
+ * 1. Strict Tenant Isolation: Enforces WHERE userId = :userId.
+ * 2. Performance: Computes aggregations in a single SQL query; NO N+1 queries.
+ * 3. Server-Side: Sorting and filtering applied in PostgreSQL before LIMIT/OFFSET.
  */
 export async function GET(req) {
   try {
@@ -19,14 +29,83 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
-    const documentId = searchParams.get("documentId");
+    const rawQuery = {
+      search: searchParams.get("search") || undefined,
+      documentId: searchParams.get("documentId") || undefined,
+      timeRange: searchParams.get("timeRange") || undefined,
+      sort: searchParams.get("sort") || undefined,
+      limit: searchParams.get("limit") || undefined,
+      offset: searchParams.get("offset") || undefined,
+    };
 
+    const validation = listConversationsQuerySchema.safeParse(rawQuery);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid query parameters.",
+          details: validation.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { search, documentId, timeRange, sort, limit, offset } = validation.data;
+
+    // 1. Build WHERE conditions
     const conditions = [eq(conversations.userId, userId)];
+
     if (documentId) {
       conditions.push(eq(conversations.documentId, documentId));
     }
 
-    const userConversations = await db
+    if (search && search.trim().length > 0) {
+      conditions.push(ilike(conversations.title, `%${search.trim()}%`));
+    }
+
+    if (timeRange && timeRange !== "all") {
+      let cutoff;
+      const now = Date.now();
+      if (timeRange === "24h") {
+        cutoff = new Date(now - 24 * 60 * 60 * 1000);
+      } else if (timeRange === "7d") {
+        cutoff = new Date(now - 7 * 24 * 60 * 60 * 1000);
+      } else if (timeRange === "30d") {
+        cutoff = new Date(now - 30 * 24 * 60 * 60 * 1000);
+      }
+      if (cutoff) {
+        conditions.push(gte(conversations.updatedAt, cutoff));
+      }
+    }
+
+    // 2. Count total matching conversations for pagination
+    const [totalResult] = await db
+      .select({ total: count(conversations.id) })
+      .from(conversations)
+      .where(and(...conditions));
+    const total = Number(totalResult?.total || 0);
+
+    // 3. Determine server-side ORDER BY clause
+    let orderClause;
+    switch (sort) {
+      case "oldest":
+        orderClause = asc(conversations.createdAt);
+        break;
+      case "most_questions":
+        orderClause = desc(
+          sql`COUNT(CASE WHEN ${messages.role} = 'user' THEN 1 END)`
+        );
+        break;
+      case "title":
+        orderClause = asc(conversations.title);
+        break;
+      case "recent":
+      default:
+        orderClause = desc(conversations.updatedAt);
+        break;
+    }
+
+    // 4. Execute single aggregated query (Zero N+1 queries)
+    const rawConversations = await db
       .select({
         id: conversations.id,
         title: conversations.title,
@@ -34,15 +113,61 @@ export async function GET(req) {
         documentName: documents.filename,
         createdAt: conversations.createdAt,
         updatedAt: conversations.updatedAt,
+        messageCount: sql`COUNT(${messages.id})::integer`,
+        questionCount: sql`COUNT(CASE WHEN ${messages.role} = 'user' THEN 1 END)::integer`,
+        lastMessageSnippet: sql`(
+          SELECT ${messages.content} 
+          FROM ${messages} 
+          WHERE ${messages.conversationId} = ${conversations.id} 
+          ORDER BY ${messages.createdAt} DESC 
+          LIMIT 1
+        )`,
+        lastMessageRole: sql`(
+          SELECT ${messages.role} 
+          FROM ${messages} 
+          WHERE ${messages.conversationId} = ${conversations.id} 
+          ORDER BY ${messages.createdAt} DESC 
+          LIMIT 1
+        )`,
       })
       .from(conversations)
       .leftJoin(documents, eq(conversations.documentId, documents.id))
+      .leftJoin(messages, eq(conversations.id, messages.conversationId))
       .where(and(...conditions))
-      .orderBy(desc(conversations.updatedAt));
+      .groupBy(
+        conversations.id,
+        conversations.title,
+        conversations.documentId,
+        documents.filename,
+        conversations.createdAt,
+        conversations.updatedAt
+      )
+      .orderBy(orderClause)
+      .limit(limit)
+      .offset(offset);
+
+    const formattedConversations = rawConversations.map((c) => ({
+      id: c.id,
+      title: c.title,
+      documentId: c.documentId,
+      documentName: c.documentName || null,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      messageCount: Number(c.messageCount || 0),
+      questionCount: Number(c.questionCount || 0),
+      lastMessageSnippet: c.lastMessageSnippet || null,
+      lastMessageRole: c.lastMessageRole || null,
+    }));
 
     return NextResponse.json({
       success: true,
-      conversations: userConversations,
+      conversations: formattedConversations,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + formattedConversations.length < total,
+      },
     });
   } catch (error) {
     console.error("GET /api/conversations error:", error);

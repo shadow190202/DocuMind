@@ -59,32 +59,48 @@ export const documentChunks = pgTable("document_chunks", {
 // ============================================================
 // 4. CONVERSATIONS TABLE
 // ============================================================
-export const conversations = pgTable("conversations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  documentId: uuid("document_id").references(() => documents.id, {
-    onDelete: "cascade",
-  }), // Optional: if null, multi-document conversation
-  title: text("title").default("New Conversation").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id").references(() => documents.id, {
+      onDelete: "cascade",
+    }), // Optional: if null, multi-document conversation
+    title: text("title").default("New Conversation").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("conversations_user_updated_idx").on(table.userId, table.updatedAt),
+    index("conversations_user_created_idx").on(table.userId, table.createdAt),
+  ]
+);
 
 // ============================================================
 // 5. MESSAGES TABLE
 // ============================================================
-export const messages = pgTable("messages", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  conversationId: uuid("conversation_id")
-    .notNull()
-    .references(() => conversations.id, { onDelete: "cascade" }),
-  role: text("role").notNull(), // 'user' | 'assistant' | 'system'
-  content: text("content").notNull(),
-  sources: jsonb("sources"), // Grounded citations: [{ chunkId, pageNumber, docName, score }]
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    role: text("role").notNull(), // 'user' | 'assistant' | 'system'
+    content: text("content").notNull(),
+    sources: jsonb("sources"), // Grounded citations: [{ chunkId, pageNumber, docName, score }]
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("messages_conversation_created_idx").on(
+      table.conversationId,
+      table.createdAt
+    ),
+  ]
+);
 
 // ============================================================
 // 6. DOCUMENT PERMISSIONS TABLE (Sharing & Access Control)

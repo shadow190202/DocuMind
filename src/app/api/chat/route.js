@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { documents, conversations, messages, aiUsageLogs } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { chatRequestSchema } from "@/lib/validations/chat";
 import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
@@ -206,12 +206,41 @@ export async function POST(req) {
       chunksOmitted,
     } = assembleRagContext(retrievedChunks, { maxContextTokens });
 
+    // 5b. Fetch bounded recent conversation history for conversational reference resolution
+    let conversationHistoryText = null;
+    if (conversationId) {
+      const recentTurns = await db
+        .select({
+          role: messages.role,
+          content: messages.content,
+        })
+        .from(messages)
+        .where(eq(messages.conversationId, conversationId))
+        .orderBy(desc(messages.createdAt))
+        .limit(4);
+
+      if (recentTurns.length > 0) {
+        // Order chronologically (earliest to newest)
+        const chronological = [...recentTurns].reverse();
+        const formatted = chronological.map(
+          (m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`
+        );
+        let joined = formatted.join("\n\n");
+        // Strictly cap at ~400 estimated tokens (approx 1,600 characters)
+        if (joined.length > 1600) {
+          joined = joined.slice(joined.length - 1600);
+        }
+        conversationHistoryText = joined;
+      }
+    }
+
     // 6. Generate grounded answer using Gemini 2.5 Flash
     let aiResponse;
     try {
       aiResponse = await generateGroundedAnswer({
         question,
         contextText,
+        conversationHistoryText,
       });
     } catch (aiError) {
       if (aiError.isRateLimit || aiError.status === 429) {
