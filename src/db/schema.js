@@ -7,6 +7,7 @@ import {
   jsonb,
   vector,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -140,6 +141,40 @@ export const aiUsageLogs = pgTable(
 );
 
 // ============================================================
+// 8. DOCUMENT SUMMARIES TABLE (Phase 11 Cached Summaries)
+// ============================================================
+export const documentSummaries = pgTable(
+  "document_summaries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    summaryType: text("summary_type").notNull(), // 'executive' | 'detailed' | 'key_points' | 'dates' | 'numbers' | 'action_items' | 'comprehensive'
+    content: text("content").notNull(), // Authoritative generated Markdown content
+    structuredData: jsonb("structured_data"), // Optional, defaults to null in Phase 11
+    model: text("model").notNull(), // 'gemini-2.5-flash'
+    promptTokens: integer("prompt_tokens"), // Nullable if usageMetadata unavailable
+    completionTokens: integer("completion_tokens"),
+    totalTokens: integer("total_tokens"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Unique constraint: strictly guarantees only one cached summary per document and summary type
+    uniqueIndex("doc_summaries_doc_type_uniq_idx").on(
+      table.documentId,
+      table.summaryType
+    ),
+    index("doc_summaries_user_created_idx").on(table.userId, table.createdAt),
+    index("doc_summaries_doc_idx").on(table.documentId),
+  ]
+);
+
+// ============================================================
 // DRIZZLE RELATIONS DEFINITIONS
 // ============================================================
 export const usersRelations = relations(users, ({ many }) => ({
@@ -147,6 +182,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   conversations: many(conversations),
   permissions: many(documentPermissions),
   aiUsageLogs: many(aiUsageLogs),
+  summaries: many(documentSummaries),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -157,6 +193,7 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   chunks: many(documentChunks),
   conversations: many(conversations),
   permissions: many(documentPermissions),
+  summaries: many(documentSummaries),
 }));
 
 export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
@@ -199,6 +236,17 @@ export const documentPermissionsRelations = relations(documentPermissions, ({ on
 export const aiUsageLogsRelations = relations(aiUsageLogs, ({ one }) => ({
   user: one(users, {
     fields: [aiUsageLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const documentSummariesRelations = relations(documentSummaries, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentSummaries.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [documentSummaries.userId],
     references: [users.id],
   }),
 }));

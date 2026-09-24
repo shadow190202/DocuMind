@@ -42,6 +42,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { SummaryTab } from "@/components/documents/summary-tab";
 
 export default function DocumentDetailsPage() {
   const params = useParams();
@@ -555,6 +556,17 @@ export default function DocumentDetailsPage() {
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           Ask AI
+                        </button>
+                        <button
+                          onClick={() => setActiveTab("summary")}
+                          className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
+                            activeTab === "summary"
+                              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Summary
                         </button>
                         <button
                           onClick={() => setActiveTab("metadata")}
@@ -1156,9 +1168,11 @@ export default function DocumentDetailsPage() {
                         </Button>
                       </form>
                     </div>
+                  ) : activeTab === "summary" ? (
+                    <SummaryTab documentId={documentId} document={document} />
                   ) : (
                     <div className="rounded-xl bg-slate-900 p-5 font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">
-                      <pre>{JSON.stringify(extracted.metadata, null, 2)}</pre>
+                      <pre>{JSON.stringify(extracted?.metadata || {}, null, 2)}</pre>
                     </div>
                   )}
                 </CardContent>
