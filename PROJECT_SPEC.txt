@@ -561,32 +561,24 @@ COMPLETED:
 [x] Document upload (Phase 5: Secure file storage, Zod validation, and upload pipeline)
 [x] Text extraction (Phase 6: Multi-format parsing pipeline for PDF, DOCX, TXT, CSV, storage synchronization, and Document Details preview)
 [x] Chunking and embeddings (Phase 7: Recursive semantic chunking, Gemini gemini-embedding-001 768-dim vector generation, pgvector storage with chunk_index, atomic transactions, and inspection UI)
+[x] Vector search & RAG retrieval (Phase 8: Parameterized pgvector cosine search, 768-dim query embedding, threshold filtering before LIMIT, strict multi-tenant isolation, RAG context assembly with estimated token budgeting, and retrieval testing UI)
 
 IN PROGRESS:
 
-[ ]
+[ ] None
 
 NOT STARTED:
 
-[ ] Project setup
-[ ] Frontend foundation
-[ ] Authentication
-[ ] Database
-[ ] Document upload
-[ ] Text extraction
-[ ] Embeddings
-[x] Vector search
-[x] RAG
-[x] AI question answering
-[x] Conversation history
-[x] Summarization
-[x] Document comparison
-[x] Permissions
-[x] Admin dashboard
-[x] Security
-[x] Testing
-[x] Deployment
-[x] Documentation
+[ ] AI question answering (Phase 9)
+[ ] Conversation history (Phase 10)
+[ ] Document summarization (Phase 11)
+[ ] Document comparison (Phase 12)
+[ ] Permissions & Document sharing (Phase 13)
+[ ] Admin dashboard (Phase 14)
+[ ] Security hardening (Phase 15)
+[ ] Testing & E2E (Phase 16)
+[ ] Deployment (Phase 17)
+[ ] Documentation and portfolio preparation (Phase 18)
 
 ============================================================
 17. KNOWN ISSUES

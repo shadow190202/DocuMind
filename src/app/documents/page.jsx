@@ -14,6 +14,10 @@ import {
   ExternalLink,
   Eye,
   RefreshCw,
+  Sparkles,
+  SlidersHorizontal,
+  Check,
+  Copy,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -38,6 +42,62 @@ export default function DocumentsPage() {
   const [docToDelete, setDocToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [processingId, setProcessingId] = useState(null);
+
+  // Vault Semantic Search State
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [vaultQuery, setVaultQuery] = useState("");
+  const [vaultTopK, setVaultTopK] = useState(5);
+  const [vaultThreshold, setVaultThreshold] = useState(0.5);
+  const [vaultSelectedDocId, setVaultSelectedDocId] = useState("");
+  const [vaultIncludeContext, setVaultIncludeContext] = useState(true);
+  const [vaultSearching, setVaultSearching] = useState(false);
+  const [vaultSearchResults, setVaultSearchResults] = useState(null);
+  const [vaultSearchError, setVaultSearchError] = useState(null);
+  const [vaultCopiedContext, setVaultCopiedContext] = useState(false);
+
+  const handleVaultSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!vaultQuery.trim()) return;
+
+    try {
+      setVaultSearching(true);
+      setVaultSearchError(null);
+      const payload = {
+        query: vaultQuery.trim(),
+        topK: Number(vaultTopK),
+        threshold: Number(vaultThreshold),
+        includeContext: Boolean(vaultIncludeContext),
+      };
+      if (vaultSelectedDocId) {
+        payload.documentId = vaultSelectedDocId;
+      }
+
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Vault search failed.");
+      }
+
+      setVaultSearchResults(data);
+    } catch (err) {
+      console.error("Vault search error:", err);
+      setVaultSearchError(err.message || "Failed to execute vault search.");
+    } finally {
+      setVaultSearching(false);
+    }
+  };
+
+  const handleCopyVaultContext = () => {
+    if (!vaultSearchResults?.context?.contextText) return;
+    navigator.clipboard.writeText(vaultSearchResults.context.contextText);
+    setVaultCopiedContext(true);
+    setTimeout(() => setVaultCopiedContext(false), 2000);
+  };
 
   const handleProcess = async (docId, e) => {
     if (e) e.stopPropagation();
@@ -172,12 +232,23 @@ export default function DocumentsPage() {
               {docs.length} {docs.length === 1 ? "File" : "Files"}
             </Badge>
           </div>
-          <Button size="sm" asChild className="gap-1.5 shadow-sm">
-            <Link href="/documents/upload">
-              <Upload className="w-4 h-4" />
-              Upload Document
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchModalOpen(true)}
+              className="gap-1.5 shadow-sm text-blue-600 dark:text-blue-400"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Vault Semantic Search
+            </Button>
+            <Button size="sm" asChild className="gap-1.5 shadow-sm">
+              <Link href="/documents/upload">
+                <Upload className="w-4 h-4" />
+                Upload Document
+              </Link>
+            </Button>
+          </div>
         </header>
 
         <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
@@ -366,6 +437,257 @@ export default function DocumentsPage() {
                 "Delete Document"
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vault Semantic Search Modal */}
+      <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-6">
+          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              <DialogTitle className="text-base font-bold">
+                Vault Semantic Vector Search
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs">
+              Search semantically across your personal document repository using pgvector cosine similarity and 768-dimensional Gemini embeddings.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-y-auto flex-1 py-4 space-y-5 pr-1">
+            {/* Search Form */}
+            <form onSubmit={handleVaultSearch} className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <Input
+                    placeholder="Search across your documents (e.g. 'financial forecast', 'user authentication')..."
+                    value={vaultQuery}
+                    onChange={(e) => setVaultQuery(e.target.value)}
+                    className="pl-9 h-10 text-sm"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={vaultSearching || !vaultQuery.trim()}
+                  className="gap-2 shrink-0"
+                >
+                  {vaultSearching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4" />
+                      Search Vault
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Scope & Parameters Bar */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-4 flex-wrap">
+                  {/* Document Scope */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Scope:</span>
+                    <select
+                      value={vaultSelectedDocId}
+                      onChange={(e) => setVaultSelectedDocId(e.target.value)}
+                      className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 max-w-[150px] truncate"
+                    >
+                      <option value="">All Documents</option>
+                      {docs
+                        .filter((d) => d.processingStatus === "completed")
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.filename}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Top-K */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Top-K:</span>
+                    <select
+                      value={vaultTopK}
+                      onChange={(e) => setVaultTopK(Number(e.target.value))}
+                      className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5"
+                    >
+                      <option value={3}>3 chunks</option>
+                      <option value={5}>5 chunks</option>
+                      <option value={10}>10 chunks</option>
+                      <option value={20}>20 chunks</option>
+                    </select>
+                  </div>
+
+                  {/* Threshold */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Min Threshold:</span>
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="1.0"
+                      step="0.05"
+                      value={vaultThreshold}
+                      onChange={(e) => setVaultThreshold(Number(e.target.value))}
+                      className="w-20 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                    <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 w-7">
+                      {Number(vaultThreshold).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Context Toggle */}
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={vaultIncludeContext}
+                      onChange={(e) => setVaultIncludeContext(e.target.checked)}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">
+                      Assemble RAG Context
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </form>
+
+            {/* Error Message */}
+            {vaultSearchError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{vaultSearchError}</span>
+              </div>
+            )}
+
+            {/* Search Results */}
+            {vaultSearchResults && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    Retrieved {vaultSearchResults.count} chunk{vaultSearchResults.count === 1 ? "" : "s"} for &quot;{vaultSearchResults.query}&quot;
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">
+                    Min Score: &gt;= {vaultSearchResults.threshold}
+                  </Badge>
+                </div>
+
+                {vaultSearchResults.count === 0 ? (
+                  <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      No matching chunks found
+                    </p>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      No document chunks met the similarity threshold of {vaultSearchResults.threshold}. Try lowering the threshold or refining your search keywords.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {vaultSearchResults.results.map((chunk, idx) => (
+                      <div
+                        key={chunk.chunkId}
+                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                      >
+                        <div className="bg-slate-50 dark:bg-slate-800/60 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                              #{idx + 1}
+                            </span>
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
+                              {chunk.documentName}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {chunk.pageNumber !== null ? `Page ${chunk.pageNumber}` : "General Section"}
+                            </Badge>
+                            <span className="text-[10px] text-slate-400">
+                              Chunk #{chunk.chunkIndex + 1}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="default"
+                              className="text-[10px] font-mono py-0.5 px-2 bg-blue-600 text-white"
+                            >
+                              {(chunk.similarityScore * 100).toFixed(1)}% Match
+                            </Badge>
+                            <span className="text-[10px] text-slate-400">
+                              ~{chunk.estimatedTokenCount} tokens
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-3.5 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed select-text">
+                          {chunk.content}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Assembled RAG Prompt Context */}
+                {vaultSearchResults.context && (
+                  <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900 text-slate-200 overflow-hidden shadow-md">
+                    <div className="bg-slate-800/90 px-4 py-2.5 border-b border-slate-700 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="text-xs font-semibold text-white">
+                          Assembled RAG Context (LLM Prompt-Ready)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px]">
+                        <span className="text-slate-400">
+                          Budget: ~{vaultSearchResults.context.totalEstimatedTokens} tokens (est.)
+                        </span>
+                        <span className="text-slate-400">
+                          Used: {vaultSearchResults.context.chunksUsed} chunks
+                        </span>
+                        {vaultSearchResults.context.chunksOmitted > 0 && (
+                          <span className="text-amber-400">
+                            Omitted: {vaultSearchResults.context.chunksOmitted}
+                          </span>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyVaultContext}
+                          className="h-6 text-[11px] bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 gap-1"
+                        >
+                          {vaultCopiedContext ? (
+                            <>
+                              <Check className="w-3 h-3 text-green-400" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              Copy
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="p-3.5 text-xs font-mono text-slate-300 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed select-text">
+                      {vaultSearchResults.context.contextText || (
+                        <span className="text-slate-500 italic">No context generated.</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">
+                Close
+              </Button>
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
