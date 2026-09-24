@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   HardDrive,
+  Info,
 } from "lucide-react";
 import { UserButton, SignedIn } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,69 @@ const adminItems = [
 export function Sidebar({ className }) {
   const pathname = usePathname() || "/dashboard";
   const [collapsed, setCollapsed] = useState(false);
+  const [usageData, setUsageData] = useState({
+    aiUsage: {
+      totalTokens: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      questionsCount: 0,
+      tokensUnavailableCount: 0,
+      hasUnavailableTokenCounts: false,
+      lastUsedAt: null,
+    },
+    vaultUsage: {
+      documentCount: 0,
+      maxDocuments: 50,
+      percentage: 0,
+    },
+  });
+
+  const fetchUsage = useCallback(async () => {
+    try {
+      const res = await fetch("/api/usage");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.success) {
+          setUsageData({
+            aiUsage: data.aiUsage,
+            vaultUsage: data.vaultUsage,
+          });
+        }
+      }
+    } catch (err) {
+      // Non-fatal error; UI gracefully defaults to zero
+      console.error("Failed to load usage data:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsage();
+
+    const handleUsageUpdate = () => {
+      fetchUsage();
+    };
+
+    window.addEventListener("documind:ai-usage-updated", handleUsageUpdate);
+    return () => {
+      window.removeEventListener("documind:ai-usage-updated", handleUsageUpdate);
+    };
+  }, [fetchUsage, pathname]);
+
+  const aiUsage = usageData.aiUsage;
+  const vaultUsage = usageData.vaultUsage;
+
+  // Relative application activity visual fill (smooth log-scale from 0% up to 100%)
+  // Does NOT represent Google provider quota or any percentage denominator
+  const activityFill =
+    aiUsage.questionsCount === 0 || aiUsage.totalTokens === 0
+      ? 0
+      : Math.min(
+          100,
+          Math.max(
+            12,
+            Math.round((Math.log10(Math.max(10, aiUsage.totalTokens)) / 6) * 100)
+          )
+        );
 
   return (
     <aside
@@ -133,24 +197,77 @@ export function Sidebar({ className }) {
         </div>
       </div>
 
-      {/* Storage Indicator Widget */}
+      {/* Storage & AI Usage Widgets */}
       {!collapsed ? (
-        <div className="p-4 m-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
-          <div className="flex items-center justify-between font-medium">
-            <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-              <HardDrive className="w-3.5 h-3.5 text-blue-500" />
-              Document Vault
-            </span>
-            <span className="text-slate-500">2 / 50 Docs</span>
+        <div className="mx-3 my-2 space-y-2.5">
+          {/* Document Vault Widget */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+            <div className="flex items-center justify-between font-medium">
+              <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <HardDrive className="w-3.5 h-3.5 text-blue-500" />
+                Document Vault
+              </span>
+              <span className="text-slate-500">
+                {vaultUsage.documentCount} / {vaultUsage.maxDocuments} Docs
+              </span>
+            </div>
+            <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-600 h-full rounded-full transition-all duration-300"
+                style={{ width: `${vaultUsage.percentage}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-400">pgvector RAG Index active</p>
           </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-blue-600 h-full rounded-full w-[4%]" />
+
+          {/* AI Usage Indicator Widget (Placed directly below Document Vault) */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+            <div className="flex items-center justify-between font-medium">
+              <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                AI Usage
+              </span>
+              <span className="text-slate-500">
+                {aiUsage.questionsCount === 1
+                  ? "1 question"
+                  : `${aiUsage.questionsCount.toLocaleString()} questions`}
+              </span>
+            </div>
+
+            {/* Visual Activity Bar (Unambiguous application activity, never Google quota) */}
+            <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${activityFill}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {aiUsage.totalTokens.toLocaleString()} tokens used
+              </span>
+            </div>
+
+            <p className="text-[9.5px] leading-tight text-slate-400">
+              ⓘ Usage tracked by DocuMind. Provider-side quota may differ.
+            </p>
           </div>
-          <p className="text-[10px] text-slate-400">pgvector RAG Index active</p>
         </div>
       ) : (
-        <div className="p-3 flex justify-center text-slate-400" title="2 of 50 documents used">
-          <HardDrive className="w-5 h-5" />
+        /* Collapsed Sidebar View */
+        <div className="p-3 flex flex-col items-center gap-3 text-slate-400">
+          <div
+            title={`Document Vault: ${vaultUsage.documentCount} of ${vaultUsage.maxDocuments} documents used`}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-default"
+          >
+            <HardDrive className="w-5 h-5 text-blue-500" />
+          </div>
+          <div
+            title={`AI Usage: ${aiUsage.questionsCount} questions, ${aiUsage.totalTokens.toLocaleString()} tokens used. Usage tracked by DocuMind. Provider-side quota may differ.`}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-default"
+          >
+            <Sparkles className="w-5 h-5 text-indigo-500" />
+          </div>
         </div>
       )}
 

@@ -6,6 +6,7 @@ import {
   uuid,
   jsonb,
   vector,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -101,12 +102,35 @@ export const documentPermissions = pgTable("document_permissions", {
 });
 
 // ============================================================
+// 7. AI USAGE LOGS TABLE (Transparent Free-Tier Token Tracking)
+// ============================================================
+export const aiUsageLogs = pgTable(
+  "ai_usage_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    model: text("model").notNull(), // 'gemini-2.5-flash'
+    operation: text("operation").notNull(), // 'chat'
+    promptTokens: integer("prompt_tokens"), // nullable if usageMetadata unavailable
+    completionTokens: integer("completion_tokens"), // nullable if usageMetadata unavailable
+    totalTokens: integer("total_tokens"), // nullable if usageMetadata unavailable
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ai_usage_logs_user_created_idx").on(table.userId, table.createdAt),
+  ]
+);
+
+// ============================================================
 // DRIZZLE RELATIONS DEFINITIONS
 // ============================================================
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
   conversations: many(conversations),
   permissions: many(documentPermissions),
+  aiUsageLogs: many(aiUsageLogs),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -155,3 +179,11 @@ export const documentPermissionsRelations = relations(documentPermissions, ({ on
     references: [users.id],
   }),
 }));
+
+export const aiUsageLogsRelations = relations(aiUsageLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [aiUsageLogs.userId],
+    references: [users.id],
+  }),
+}));
+

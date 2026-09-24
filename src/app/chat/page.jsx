@@ -174,6 +174,15 @@ export default function ChatPage() {
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Notify sidebar to refresh live AI usage counters
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("documind:ai-usage-updated", {
+            detail: data.usage,
+          })
+        );
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setError(err.message || "Failed to generate answer.");

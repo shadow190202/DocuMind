@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { documents, conversations, messages } from "@/db/schema";
+import { documents, conversations, messages, aiUsageLogs } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { chatRequestSchema } from "@/lib/validations/chat";
 import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
-import { generateGroundedAnswer } from "@/lib/ai/gemini";
+import { generateGroundedAnswer, CHAT_MODEL } from "@/lib/ai/gemini";
 
 export const dynamic = "force-dynamic";
 
@@ -207,9 +207,9 @@ export async function POST(req) {
     } = assembleRagContext(retrievedChunks, { maxContextTokens });
 
     // 6. Generate grounded answer using Gemini 2.5 Flash
-    let answerText;
+    let aiResponse;
     try {
-      answerText = await generateGroundedAnswer({
+      aiResponse = await generateGroundedAnswer({
         question,
         contextText,
       });
@@ -226,7 +226,10 @@ export async function POST(req) {
       throw aiError;
     }
 
-    // 7. Persist conversation, user message, and assistant answer atomically
+    const answerText = aiResponse?.answer || String(aiResponse);
+    const aiUsage = aiResponse?.usage || null;
+
+    // 7. Persist conversation, user message, assistant answer, and usage atomically
     const saved = await db.transaction(async (tx) => {
       let activeConvId = conversationId;
       if (!activeConvId) {
@@ -267,6 +270,16 @@ export async function POST(req) {
         })
         .returning({ id: messages.id, createdAt: messages.createdAt });
 
+      // Atomically persist verified AI usage inside the transaction
+      await tx.insert(aiUsageLogs).values({
+        userId,
+        model: CHAT_MODEL,
+        operation: "chat",
+        promptTokens: aiUsage?.promptTokens ?? null,
+        completionTokens: aiUsage?.completionTokens ?? null,
+        totalTokens: aiUsage?.totalTokens ?? null,
+      });
+
       return {
         conversationId: activeConvId,
         userMessageId: userMsg.id,
@@ -287,6 +300,14 @@ export async function POST(req) {
         chunksUsed,
         chunksOmitted,
       },
+      usage: aiUsage
+        ? {
+            promptTokens: aiUsage.promptTokens,
+            completionTokens: aiUsage.completionTokens,
+            totalTokens: aiUsage.totalTokens,
+            unavailable: Boolean(aiUsage.unavailable),
+          }
+        : null,
       insufficientContext: false,
     });
   } catch (error) {

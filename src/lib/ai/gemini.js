@@ -180,6 +180,18 @@ ${question.trim()}`;
 }
 
 /**
+ * Grounded Answer response class that behaves transparently as a string
+ * while preserving official usage metadata and structured answer properties.
+ */
+export class GroundedAnswerResponse extends String {
+  constructor(str, usage = null) {
+    super(str);
+    this.answer = str;
+    this.usage = usage;
+  }
+}
+
+/**
  * Generates a grounded answer from document context using Gemini 2.5 Flash.
  *
  * Implements free-tier rate limit friendliness:
@@ -187,11 +199,16 @@ ${question.trim()}`;
  * - If still failing, throws a clean error with isRateLimit=true.
  * - No aggressive retry loops.
  *
+ * Usage Metadata:
+ * - Captures official promptTokenCount, candidatesTokenCount, totalTokenCount.
+ * - If usageMetadata is missing from Gemini, sets tokens to null with unavailable=true.
+ * - Never fabricates fake or zero token counts.
+ *
  * @param {Object} params
  * @param {string} params.question - The user's query
  * @param {string} params.contextText - Formatted RAG context string
  * @param {string} [params.systemInstruction] - Optional override system instruction
- * @returns {Promise<string>} - Generated answer markdown text
+ * @returns {Promise<GroundedAnswerResponse>} - Generated answer with attached usage
  */
 export async function generateGroundedAnswer({
   question,
@@ -203,7 +220,10 @@ export async function generateGroundedAnswer({
   }
 
   if (!contextText || typeof contextText !== "string" || contextText.trim().length === 0) {
-    return "Based on the provided document context, there is insufficient information to answer this question.";
+    return new GroundedAnswerResponse(
+      "Based on the provided document context, there is insufficient information to answer this question.",
+      null
+    );
   }
 
   const ai = getGenAIClient();
@@ -229,7 +249,35 @@ export async function generateGroundedAnswer({
         throw new Error("Gemini returned an empty response.");
       }
 
-      return answer;
+      // Extract usage metadata if present; do NOT fabricate zero if missing
+      let usage = null;
+      if (
+        response?.usageMetadata &&
+        typeof response.usageMetadata.totalTokenCount === "number"
+      ) {
+        usage = {
+          promptTokens:
+            typeof response.usageMetadata.promptTokenCount === "number"
+              ? response.usageMetadata.promptTokenCount
+              : null,
+          completionTokens:
+            typeof response.usageMetadata.candidatesTokenCount === "number"
+              ? response.usageMetadata.candidatesTokenCount
+              : null,
+          totalTokens: response.usageMetadata.totalTokenCount,
+          unavailable: false,
+        };
+      } else {
+        // Missing metadata: never fabricate token counts or pretend it used 0 tokens
+        usage = {
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          unavailable: true,
+        };
+      }
+
+      return new GroundedAnswerResponse(answer, usage);
     } catch (err) {
       lastError = err;
       const isRateLimit =
