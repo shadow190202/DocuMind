@@ -562,6 +562,7 @@ COMPLETED:
 [x] Text extraction (Phase 6: Multi-format parsing pipeline for PDF, DOCX, TXT, CSV, storage synchronization, and Document Details preview)
 [x] Chunking and embeddings (Phase 7: Recursive semantic chunking, Gemini gemini-embedding-001 768-dim vector generation, pgvector storage with chunk_index, atomic transactions, and inspection UI)
 [x] Vector search & RAG retrieval (Phase 8: Parameterized pgvector cosine search, 768-dim query embedding, threshold filtering before LIMIT, strict multi-tenant isolation, RAG context assembly with estimated token budgeting, and retrieval testing UI)
+[x] AI question answering & grounded RAG (Phase 9: Gemini 2.5 Flash grounded generation, prompt-injection quarantine defense, [SOURCE N] citations, single-doc & vault-wide Q&A, rate-limit friendly 429 handling, conversation persistence in PostgreSQL, Ask AI tab on document details, and full Vault-Wide Knowledge Assistant on /chat)
 
 IN PROGRESS:
 
@@ -569,7 +570,6 @@ IN PROGRESS:
 
 NOT STARTED:
 
-[ ] AI question answering (Phase 9)
 [ ] Conversation history (Phase 10)
 [ ] Document summarization (Phase 11)
 [ ] Document comparison (Phase 12)

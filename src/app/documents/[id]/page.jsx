@@ -21,6 +21,12 @@ import {
   CheckCircle2,
   Search,
   SlidersHorizontal,
+  MessageSquare,
+  Send,
+  Bot,
+  User,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -48,7 +54,7 @@ export default function DocumentDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("full"); // "full" | "pages" | "chunks" | "search" | "metadata"
+  const [activeTab, setActiveTab] = useState("full"); // "full" | "pages" | "chunks" | "search" | "qa" | "metadata"
   const [copied, setCopied] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -62,6 +68,16 @@ export default function DocumentDetailsPage() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [copiedContext, setCopiedContext] = useState(false);
+
+  // AI Q&A State
+  const [qaQuestion, setQaQuestion] = useState("");
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
+  const [messagesList, setMessagesList] = useState([]);
+  const [expandedSources, setExpandedSources] = useState({});
+  const [qaTopK, setQaTopK] = useState(5);
+  const [qaThreshold, setQaThreshold] = useState(0.5);
 
   const fetchData = async () => {
     try {
@@ -98,6 +114,7 @@ export default function DocumentDetailsPage() {
   useEffect(() => {
     if (documentId) {
       fetchData();
+      fetchDocumentConversation();
     }
   }, [documentId]);
 
@@ -189,6 +206,101 @@ export default function DocumentDetailsPage() {
     navigator.clipboard.writeText(searchResults.context.contextText);
     setCopiedContext(true);
     setTimeout(() => setCopiedContext(false), 2000);
+  };
+
+  const fetchDocumentConversation = async () => {
+    if (!documentId) return;
+    try {
+      const res = await fetch(`/api/conversations?documentId=${documentId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversations && data.conversations.length > 0) {
+          const latestConv = data.conversations[0];
+          setConversationId(latestConv.id);
+          const mRes = await fetch(`/api/conversations/${latestConv.id}`);
+          if (mRes.ok) {
+            const mData = await mRes.json();
+            setMessagesList(mData.messages || []);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch document conversation history:", err);
+    }
+  };
+
+  const handleAskQuestion = async (overrideQuestion) => {
+    const q = (typeof overrideQuestion === "string" ? overrideQuestion : qaQuestion).trim();
+    if (!q || qaLoading) return;
+
+    setQaQuestion("");
+    setQaError(null);
+
+    // Optimistic user message
+    const tempUserMsg = {
+      id: "temp-user-" + Date.now(),
+      role: "user",
+      content: q,
+      createdAt: new Date().toISOString(),
+    };
+    setMessagesList((prev) => [...prev, tempUserMsg]);
+    setQaLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: q,
+          documentId,
+          conversationId,
+          topK: Number(qaTopK),
+          threshold: Number(qaThreshold),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate answer.");
+      }
+
+      setConversationId(data.conversationId);
+      const assistantMsg = {
+        id: data.assistantMessageId,
+        role: "assistant",
+        content: data.answer,
+        sources: data.sources || [],
+        createdAt: new Date().toISOString(),
+      };
+      setMessagesList((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      console.error("Ask question error:", err);
+      setQaError(err.message || "Failed to generate answer.");
+    } finally {
+      setQaLoading(false);
+    }
+  };
+
+  const toggleSourceExpanded = (msgId, srcNum) => {
+    const key = `${msgId}-${srcNum}`;
+    setExpandedSources((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleClearChat = async () => {
+    if (!conversationId) {
+      setMessagesList([]);
+      return;
+    }
+    try {
+      await fetch(`/api/conversations/${conversationId}`, { method: "DELETE" });
+      setConversationId(null);
+      setMessagesList([]);
+    } catch (err) {
+      console.error("Error clearing chat:", err);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -432,6 +544,17 @@ export default function DocumentDetailsPage() {
                         >
                           <Search className="w-3.5 h-3.5" />
                           Semantic Search
+                        </button>
+                        <button
+                          onClick={() => setActiveTab("qa")}
+                          className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
+                            activeTab === "qa"
+                              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          Ask AI
                         </button>
                         <button
                           onClick={() => setActiveTab("metadata")}
@@ -785,6 +908,253 @@ export default function DocumentDetailsPage() {
                           )}
                         </div>
                       )}
+                    </div>
+                  ) : activeTab === "qa" ? (
+                    <div className="space-y-4">
+                      {/* Q&A Controls Bar */}
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            Grounded Document Intelligence
+                          </span>
+                          <Badge variant="outline" className="text-[10px] font-mono">
+                            gemini-2.5-flash
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center gap-4 flex-wrap">
+                          {/* Top K */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-500">Top-K Chunks:</span>
+                            <select
+                              value={qaTopK}
+                              onChange={(e) => setQaTopK(Number(e.target.value))}
+                              className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5"
+                            >
+                              <option value={3}>3</option>
+                              <option value={5}>5 (default)</option>
+                              <option value={10}>10</option>
+                            </select>
+                          </div>
+
+                          {/* Threshold */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-500">Min Score:</span>
+                            <input
+                              type="range"
+                              min="0.0"
+                              max="1.0"
+                              step="0.05"
+                              value={qaThreshold}
+                              onChange={(e) => setQaThreshold(Number(e.target.value))}
+                              className="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                            />
+                            <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                              {Number(qaThreshold).toFixed(2)}
+                            </span>
+                          </div>
+
+                          {messagesList.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleClearChat}
+                              className="h-7 text-xs text-slate-500 hover:text-red-600"
+                            >
+                              Clear Chat
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Messages Thread Container */}
+                      <div className="min-h-[380px] max-h-[520px] overflow-y-auto space-y-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                        {messagesList.length === 0 ? (
+                          <div className="py-12 text-center space-y-4">
+                            <div className="h-12 w-12 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+                              <Bot className="w-6 h-6" />
+                            </div>
+                            <div className="space-y-1">
+                              <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                Ask anything about {document?.filename}
+                              </h4>
+                              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                Answers are strictly synthesized from retrieved document chunks with verifiable source citations.
+                              </p>
+                            </div>
+
+                            {/* Suggested Starter Questions */}
+                            <div className="pt-2 flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
+                              {[
+                                "What is the primary summary of this document?",
+                                "What are the key conclusions or findings?",
+                                "List important figures, metrics, or dates mentioned.",
+                              ].map((suggestedQ, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleAskQuestion(suggestedQ)}
+                                  className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors shadow-2xs text-left"
+                                >
+                                  {suggestedQ}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          messagesList.map((msg, idx) => (
+                            <div
+                              key={msg.id || idx}
+                              className={`flex flex-col ${
+                                msg.role === "user" ? "items-end" : "items-start"
+                              }`}
+                            >
+                              <div
+                                className={`max-w-[85%] rounded-2xl p-4 text-xs ${
+                                  msg.role === "user"
+                                    ? "bg-blue-600 text-white rounded-br-xs shadow-xs"
+                                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-xs shadow-xs"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-1.5 opacity-80 text-[10px] font-semibold">
+                                  {msg.role === "user" ? (
+                                    <>
+                                      <User className="w-3 h-3" />
+                                      <span>You</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Bot className="w-3.5 h-3.5 text-blue-500" />
+                                      <span>DocuMind AI</span>
+                                    </>
+                                  )}
+                                </div>
+
+                                <div className="whitespace-pre-wrap leading-relaxed select-text font-sans">
+                                  {msg.content}
+                                </div>
+
+                                {/* Source Citations Container */}
+                                {msg.sources && msg.sources.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2">
+                                    <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1.5">
+                                      <Sparkles className="w-3 h-3 text-blue-500" />
+                                      <span>
+                                        Grounded in {msg.sources.length} document source
+                                        {msg.sources.length === 1 ? "" : "s"}:
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                      {msg.sources.map((src) => {
+                                        const isExp =
+                                          expandedSources[`${msg.id}-${src.sourceNumber}`];
+                                        return (
+                                          <div
+                                            key={src.sourceNumber}
+                                            className="rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/60 text-[11px] overflow-hidden"
+                                          >
+                                            <div
+                                              onClick={() =>
+                                                toggleSourceExpanded(msg.id, src.sourceNumber)
+                                              }
+                                              className="p-2 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
+                                            >
+                                              <div className="flex items-center gap-2 truncate">
+                                                <Badge
+                                                  variant="default"
+                                                  className="text-[10px] py-0 px-1.5 bg-blue-600 text-white font-mono"
+                                                >
+                                                  SOURCE {src.sourceNumber}
+                                                </Badge>
+                                                <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                  {src.pageNumber !== null
+                                                    ? `Page ${src.pageNumber}`
+                                                    : "General Section"}
+                                                </span>
+                                                <span className="text-slate-400 text-[10px]">
+                                                  Chunk #{src.chunkIndex + 1}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-[10px] py-0"
+                                                >
+                                                  {(src.similarityScore * 100).toFixed(1)}% Match
+                                                </Badge>
+                                                {isExp ? (
+                                                  <ChevronUp className="w-3 h-3 text-slate-400" />
+                                                ) : (
+                                                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                                                )}
+                                              </div>
+                                            </div>
+                                            {isExp && (
+                                              <div className="p-3 border-t border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-950 font-mono text-[10px] text-slate-600 dark:text-slate-400 whitespace-pre-wrap select-text leading-relaxed">
+                                                {src.content || "(Grounded passage excerpt)"}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+
+                        {qaLoading && (
+                          <div className="flex items-start gap-2">
+                            <div className="rounded-2xl p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 rounded-bl-xs shadow-xs flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                              <span>Synthesizing grounded answer with Gemini 2.5 Flash...</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Error Alert */}
+                      {qaError && (
+                        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{qaError}</span>
+                        </div>
+                      )}
+
+                      {/* Question Input Form */}
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleAskQuestion();
+                        }}
+                        className="flex gap-2"
+                      >
+                        <div className="relative flex-1">
+                          <Input
+                            placeholder={`Ask a question about ${document?.filename || "this document"}...`}
+                            value={qaQuestion}
+                            onChange={(e) => setQaQuestion(e.target.value)}
+                            disabled={qaLoading}
+                            className="h-10 text-xs pl-3 pr-10"
+                          />
+                        </div>
+                        <Button
+                          type="submit"
+                          disabled={qaLoading || !qaQuestion.trim()}
+                          className="h-10 px-4 gap-1.5 shrink-0"
+                        >
+                          {qaLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Send className="w-3.5 h-3.5" />
+                              <span>Ask</span>
+                            </>
+                          )}
+                        </Button>
+                      </form>
                     </div>
                   ) : (
                     <div className="rounded-xl bg-slate-900 p-5 font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">
