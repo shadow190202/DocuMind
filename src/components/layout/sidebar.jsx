@@ -49,6 +49,7 @@ export function Sidebar({ className }) {
       questionsCount: 0,
       chatQuestionsCount: 0,
       summariesCount: 0,
+      comparisonsCount: 0,
       tokensUnavailableCount: 0,
       hasUnavailableTokenCounts: false,
       lastUsedAt: null,
@@ -238,7 +239,7 @@ export function Sidebar({ className }) {
               </span>
               <span
                 className="text-slate-500 cursor-default"
-                title={`Chat Questions: ${aiUsage.chatQuestionsCount ?? 0}, Summaries: ${aiUsage.summariesCount ?? 0}`}
+                title={`Chat Questions: ${aiUsage.chatQuestionsCount ?? 0}, Summaries: ${aiUsage.summariesCount ?? 0}, Comparisons: ${aiUsage.comparisonsCount ?? 0}`}
               >
                 {requestsCount === 1
                   ? "1 AI request"

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { documents, documentChunks } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { documents, documentChunks, documentSummaries, documentComparisons } from "@/db/schema";
+import { eq, and, or } from "drizzle-orm";
 import { getFile, saveExtractedData } from "@/lib/storage";
 import { extractTextFromDocument } from "@/lib/parsers";
 import { chunkDocument } from "@/lib/ai/chunker";
@@ -186,6 +186,21 @@ export async function POST(req, { params }) {
       await tx
         .delete(documentChunks)
         .where(eq(documentChunks.documentId, id));
+
+      // Transactional Cache Invalidation: invalidate comparisons where this document was source or target
+      await tx
+        .delete(documentComparisons)
+        .where(
+          or(
+            eq(documentComparisons.sourceDocumentId, id),
+            eq(documentComparisons.targetDocumentId, id)
+          )
+        );
+
+      // Invalidate existing cached summaries for this document
+      await tx
+        .delete(documentSummaries)
+        .where(eq(documentSummaries.documentId, id));
 
       // Prepare records for batch insertion
       const chunkRecords = chunks.map((chunk, index) => ({

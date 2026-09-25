@@ -32,6 +32,7 @@ export async function GET() {
         operationsCount: count(aiUsageLogs.id),
         chatQuestionsCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'chat' THEN 1 END)::integer`,
         summariesCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'summarize' THEN 1 END)::integer`,
+        comparisonsCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'compare' THEN 1 END)::integer`,
         tokensUnavailableCount: sql`COUNT(CASE WHEN ${aiUsageLogs.totalTokens} IS NULL THEN 1 END)::integer`,
         lastUsedAt: sql`MAX(${aiUsageLogs.createdAt})`,
       })
@@ -56,6 +57,7 @@ export async function GET() {
     const operationsCount = Number(usageResult?.operationsCount || 0);
     const chatQuestionsCount = Number(usageResult?.chatQuestionsCount || 0);
     const summariesCount = Number(usageResult?.summariesCount || 0);
+    const comparisonsCount = Number(usageResult?.comparisonsCount || 0);
     const tokensUnavailableCount = Number(
       usageResult?.tokensUnavailableCount || 0
     );
@@ -71,6 +73,7 @@ export async function GET() {
         questionsCount: operationsCount, // Maintained for backward compatibility
         chatQuestionsCount,
         summariesCount,
+        comparisonsCount,
         tokensUnavailableCount,
         hasUnavailableTokenCounts: tokensUnavailableCount > 0,
         lastUsedAt: usageResult?.lastUsedAt || null,

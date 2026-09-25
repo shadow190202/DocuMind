@@ -175,6 +175,44 @@ export const documentSummaries = pgTable(
 );
 
 // ============================================================
+// DOCUMENT COMPARISONS (Phase 12)
+// ============================================================
+export const documentComparisons = pgTable(
+  "document_comparisons",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceDocumentId: uuid("source_document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    targetDocumentId: uuid("target_document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    content: text("content").notNull(), // Authoritative generated Markdown comparison report
+    structuredData: jsonb("structured_data"), // Nullable and NULL for Phase 12
+    model: text("model").notNull(), // 'gemini-2.5-flash'
+    promptTokens: integer("prompt_tokens"), // Nullable if usageMetadata unavailable
+    completionTokens: integer("completion_tokens"),
+    totalTokens: integer("total_tokens"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Directional unique pair: (sourceDocumentId, targetDocumentId)
+    // (A, B) and (B, A) are separate directional records
+    uniqueIndex("doc_comparisons_pair_uniq_idx").on(
+      table.sourceDocumentId,
+      table.targetDocumentId
+    ),
+    index("doc_comparisons_user_created_idx").on(table.userId, table.createdAt),
+    index("doc_comparisons_source_idx").on(table.sourceDocumentId),
+    index("doc_comparisons_target_idx").on(table.targetDocumentId),
+  ]
+);
+
+// ============================================================
 // DRIZZLE RELATIONS DEFINITIONS
 // ============================================================
 export const usersRelations = relations(users, ({ many }) => ({
@@ -183,6 +221,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   permissions: many(documentPermissions),
   aiUsageLogs: many(aiUsageLogs),
   summaries: many(documentSummaries),
+  comparisons: many(documentComparisons),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -194,6 +233,8 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   conversations: many(conversations),
   permissions: many(documentPermissions),
   summaries: many(documentSummaries),
+  sourceComparisons: many(documentComparisons, { relationName: "sourceComparisons" }),
+  targetComparisons: many(documentComparisons, { relationName: "targetComparisons" }),
 }));
 
 export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
@@ -248,6 +289,23 @@ export const documentSummariesRelations = relations(documentSummaries, ({ one })
   user: one(users, {
     fields: [documentSummaries.userId],
     references: [users.id],
+  }),
+}));
+
+export const documentComparisonsRelations = relations(documentComparisons, ({ one }) => ({
+  user: one(users, {
+    fields: [documentComparisons.userId],
+    references: [users.id],
+  }),
+  sourceDocument: one(documents, {
+    fields: [documentComparisons.sourceDocumentId],
+    references: [documents.id],
+    relationName: "sourceComparisons",
+  }),
+  targetDocument: one(documents, {
+    fields: [documentComparisons.targetDocumentId],
+    references: [documents.id],
+    relationName: "targetComparisons",
   }),
 }));
 
