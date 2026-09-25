@@ -406,10 +406,16 @@ ${dimensionInstruction}`;
 /**
  * Low-level helper to call Gemini generateContent with 429 rate-limit backoff.
  */
-async function callGeminiSummarizer(prompt, systemInstruction = DEFAULT_SUMMARIZATION_SYSTEM_INSTRUCTION) {
+export async function callGeminiSummarizer(
+  prompt,
+  systemInstruction = DEFAULT_SUMMARIZATION_SYSTEM_INSTRUCTION,
+  options = {}
+) {
   const ai = getGenAIClient();
   const maxAttempts = 2; // at most 1 retry on 429
   let lastError = null;
+  const maxOutputTokens =
+    typeof options === "number" ? options : (options?.maxOutputTokens ?? 3000);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -419,7 +425,7 @@ async function callGeminiSummarizer(prompt, systemInstruction = DEFAULT_SUMMARIZ
         config: {
           systemInstruction,
           temperature: 0.2, // Low temperature for high factual fidelity
-          maxOutputTokens: 3000,
+          maxOutputTokens,
         },
       });
 
@@ -771,6 +777,24 @@ export function buildBidirectionalCandidateAlignment({
       text
     );
 
+  // Helper to extract available neighboring context (±1 chunk) for isolated units
+  const getAdjacentContext = (chunks, idx) => {
+    if (!Array.isArray(chunks) || chunks.length <= 1) {
+      const empty = [];
+      empty.prev = null;
+      empty.next = null;
+      return empty;
+    }
+    const prev = idx > 0 ? chunks[idx - 1] : null;
+    const next = idx < chunks.length - 1 ? chunks[idx + 1] : null;
+    const context = [];
+    if (prev) context.push(prev);
+    if (next) context.push(next);
+    context.prev = prev;
+    context.next = next;
+    return context;
+  };
+
   // Direction 1: B -> A (Query Document A for candidates matching each B chunk)
   for (let bIdx = 0; bIdx < chunksB.length; bIdx++) {
     const chunkB = chunksB[bIdx];
@@ -820,45 +844,72 @@ export function buildBidirectionalCandidateAlignment({
     if (visitedB.has(bIdx)) continue;
     const bCandidates = edgesBtoA.get(bIdx) || [];
 
-    if (bCandidates.length === 0) {
-      // Unmatched B chunk -> Added Candidate
+    // Filter to candidates in Document A that have verified bidirectional support in edgesAtoB
+    const bidirectionalCandidates = bCandidates.filter((cand) => {
+      if (visitedA.has(cand.aIdx)) return false;
+      const aCands = edgesAtoB.get(cand.aIdx) || [];
+      return aCands.some((c) => c.bIdx === bIdx);
+    });
+
+    if (bidirectionalCandidates.length === 0) {
+      // Unmatched B chunk (either no candidates or B->A-only without bidirectional confirmation)
       visitedB.add(bIdx);
       const textB = getChunkText(chunksB[bIdx]);
       units.push({
         type: "added",
         chunksA: [],
         chunksB: [chunksB[bIdx]],
+        contextA: null,
+        contextB: getAdjacentContext(chunksB, bIdx),
         similarity: 0,
         hasNumbersDates: hasNumbersOrDates(textB),
       });
       continue;
     }
 
-    const topA = bCandidates[0];
+    const topA = bidirectionalCandidates[0];
     const topAIdx = topA.aIdx;
 
-    // Check ambiguous match: near-identical similarity (|S1 - S2| < 0.03)
+    // Check ambiguous match: near-identical similarity (|S1 - S2| < 0.03) with bidirectional confirmation
     let ambiguousCandidates = [];
     if (
-      bCandidates.length > 1 &&
-      Math.abs(bCandidates[0].sim - bCandidates[1].sim) < 0.03
+      bidirectionalCandidates.length > 1 &&
+      Math.abs(bidirectionalCandidates[0].sim - bidirectionalCandidates[1].sim) < 0.03
     ) {
-      ambiguousCandidates = [bCandidates[0].aIdx, bCandidates[1].aIdx];
+      ambiguousCandidates = [bidirectionalCandidates[0].aIdx, bidirectionalCandidates[1].aIdx];
     }
 
-    // Check Many-to-One (N:1): Does next B chunk also match topAIdx?
+    // Check Many-to-One (N:1): Does next B chunk also bidirectionally match topAIdx?
     const groupedB = [chunksB[bIdx]];
     visitedB.add(bIdx);
 
     if (bIdx + 1 < chunksB.length && !visitedB.has(bIdx + 1)) {
       const nextBCands = edgesBtoA.get(bIdx + 1) || [];
-      if (nextBCands.some((c) => c.aIdx === topAIdx)) {
+      const nextMatchesTopA = nextBCands.some((c) => c.aIdx === topAIdx);
+      const topAEdges = edgesAtoB.get(topAIdx) || [];
+      const topAConfirmsNext = topAEdges.some((c) => c.bIdx === bIdx + 1);
+
+      if (nextMatchesTopA && topAConfirmsNext) {
         groupedB.push(chunksB[bIdx + 1]);
         visitedB.add(bIdx + 1);
       }
     }
 
-    // Check One-to-Many (1:N): Does topAIdx match multiple B chunks?
+    // Check One-to-Many (1:N): Cross-reference A->B candidate evidence for topAIdx
+    const topAEdges = edgesAtoB.get(topAIdx) || [];
+    for (const aCand of topAEdges) {
+      const targetBIdx = aCand.bIdx;
+      if (targetBIdx !== bIdx && !visitedB.has(targetBIdx)) {
+        const targetBCands = edgesBtoA.get(targetBIdx) || [];
+        if (targetBCands.some((c) => c.aIdx === topAIdx)) {
+          if (Math.abs(targetBIdx - bIdx) === 1) {
+            groupedB.push(chunksB[targetBIdx]);
+            visitedB.add(targetBIdx);
+          }
+        }
+      }
+    }
+
     const groupedA = [chunksA[topAIdx]];
     visitedA.add(topAIdx);
 
@@ -874,16 +925,22 @@ export function buildBidirectionalCandidateAlignment({
     const combinedText =
       groupedA.map(getChunkText).join(" ") + " " + groupedB.map(getChunkText).join(" ");
 
+    // Attach neighboring context (±1 chunk) for isolated single-chunk units (null for multi-chunk grouped)
+    const contextA = groupedA.length === 1 ? getAdjacentContext(chunksA, topAIdx) : null;
+    const contextB = groupedB.length === 1 ? getAdjacentContext(chunksB, bIdx) : null;
+
     units.push({
       type: topA.sim >= similarityHigh ? "common" : "modified",
       chunksA: groupedA,
       chunksB: groupedB,
+      contextA,
+      contextB,
       similarity: topA.sim,
       hasNumbersDates: hasNumbersOrDates(combinedText),
     });
   }
 
-  // Unmatched A chunks -> Removed Candidates
+  // Unmatched A chunks (including A->B-only without bidirectional confirmation) -> Removed Candidates
   for (let aIdx = 0; aIdx < chunksA.length; aIdx++) {
     if (!visitedA.has(aIdx)) {
       visitedA.add(aIdx);
@@ -892,6 +949,8 @@ export function buildBidirectionalCandidateAlignment({
         type: "removed",
         chunksA: [chunksA[aIdx]],
         chunksB: [],
+        contextA: getAdjacentContext(chunksA, aIdx),
+        contextB: null,
         similarity: 0,
         hasNumbersDates: hasNumbersOrDates(textA),
       });
@@ -971,7 +1030,8 @@ export async function generateDocumentComparison({
     const prompt = buildDocumentComparisonPrompt({ textA, textB });
     const { text: content, usage } = await callGeminiSummarizer(
       prompt,
-      systemInstruction
+      systemInstruction,
+      { maxOutputTokens: 3000 }
     );
 
     return {
@@ -1003,6 +1063,8 @@ export async function generateDocumentComparison({
         type: aChunk && bChunk ? "modified" : aChunk ? "removed" : "added",
         chunksA: aChunk ? [aChunk] : [],
         chunksB: bChunk ? [bChunk] : [],
+        contextA: null,
+        contextB: null,
         similarity: aChunk && bChunk ? 0.75 : 0,
         hasNumbersDates: false,
       });
@@ -1055,8 +1117,22 @@ export async function generateDocumentComparison({
 
     const batchDescription = batch
       .map((u, idx) => {
-        const aText = u.chunksA.map(getChunkText).join("\n") || "(None - Added in B)";
-        const bText = u.chunksB.map(getChunkText).join("\n") || "(None - Removed from A)";
+        let aText = u.chunksA.map(getChunkText).join("\n") || "(None - Added in B)";
+        if (u.chunksA.length === 1 && u.contextA && (u.contextA.prev || u.contextA.next)) {
+          const aCtx = [];
+          if (u.contextA.prev) aCtx.push(`[Preceding Context: ${getChunkText(u.contextA.prev).slice(0, 150)}...]`);
+          if (u.contextA.next) aCtx.push(`[Succeeding Context: ${getChunkText(u.contextA.next).slice(0, 150)}...]`);
+          if (aCtx.length > 0) aText += `\n${aCtx.join(" ")}`;
+        }
+
+        let bText = u.chunksB.map(getChunkText).join("\n") || "(None - Removed from A)";
+        if (u.chunksB.length === 1 && u.contextB && (u.contextB.prev || u.contextB.next)) {
+          const bCtx = [];
+          if (u.contextB.prev) bCtx.push(`[Preceding Context: ${getChunkText(u.contextB.prev).slice(0, 150)}...]`);
+          if (u.contextB.next) bCtx.push(`[Succeeding Context: ${getChunkText(u.contextB.next).slice(0, 150)}...]`);
+          if (bCtx.length > 0) bText += `\n${bCtx.join(" ")}`;
+        }
+
         return `[COMPARISON UNIT ${idx + 1} (${u.type.toUpperCase()})]
 DOCUMENT A:
 ${aText}
@@ -1082,7 +1158,8 @@ Keep notes strictly factual and objective. Do NOT extrapolate or assume.`;
 
     const { text: segmentFindings, usage: mapUsage } = await callGeminiSummarizer(
       mapPrompt,
-      systemInstruction
+      systemInstruction,
+      { maxOutputTokens: 1000 }
     );
 
     intermediateFindings.push(
@@ -1122,7 +1199,8 @@ Format the Important Numerical & Date Changes section as a Markdown table:
 
   const { text: finalContent, usage: reduceUsage } = await callGeminiSummarizer(
     reducePrompt,
-    systemInstruction
+    systemInstruction,
+    { maxOutputTokens: 3000 }
   );
   collectedUsages.push(reduceUsage);
 

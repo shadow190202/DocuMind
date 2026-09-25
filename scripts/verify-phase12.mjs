@@ -20,6 +20,7 @@ import {
   buildDocumentComparisonPrompt,
   computeCosineSimilarity,
   buildBidirectionalCandidateAlignment,
+  callGeminiSummarizer,
   SIMILARITY_HIGH,
   SIMILARITY_MODERATE,
   CHAT_MODEL,
@@ -237,6 +238,176 @@ async function runPhase12Verification() {
     assert(
       alignmentUnits.some((u) => u.hasNumbersDates === true),
       "Correctly detects numerical and date elements"
+    );
+
+    // ----------------------------------------------------
+    // TEST SUITE 3.1: Focused Verification for Defect 1 (Bidirectional edgesAtoB Fusion)
+    // ----------------------------------------------------
+    console.log("\n--- 3.1 Focused Verification for Defect 1: Bidirectional edgesAtoB Fusion ---");
+
+    // Case 1: Reciprocal 1:1 match
+    const bidiDocA = [
+      { chunkIndex: 0, content: "Reciprocal clause A", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Unique clause in A", embedding: [0, 1, 0] },
+    ];
+    const bidiDocB = [
+      { chunkIndex: 0, content: "Reciprocal clause B", embedding: [0.99, 0.05, 0] }, // high similarity with A0
+      { chunkIndex: 1, content: "Unique clause in B", embedding: [0, 0, 1] },
+    ];
+
+    const bidiUnits = buildBidirectionalCandidateAlignment({
+      chunksA: bidiDocA,
+      chunksB: bidiDocB,
+      similarityModerate: 0.65,
+      similarityHigh: 0.85,
+    });
+    assert(
+      bidiUnits.some((u) => u.type === "common" && u.chunksA.length === 1 && u.chunksB.length === 1),
+      "Reciprocal 1:1 match confirmed bidirectionally as 'common'"
+    );
+
+    // Case 2: B->A-only relationship must NOT be promoted to bidirectional match
+    // B2 has candidate A0 (sim=0.80), but A0's topK=2 candidates in edgesAtoB are B0 (1.0) and B1 (0.998)
+    const bToAOnly_A = [
+      { chunkIndex: 0, content: "Alpha primary", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Alpha other", embedding: [0, 1, 0] },
+    ];
+    const bToAOnly_B = [
+      { chunkIndex: 0, content: "Beta matching Alpha primary", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Beta also close to Alpha primary", embedding: [0.99, 0.05, 0] },
+      { chunkIndex: 2, content: "Beta weak candidate to Alpha primary", embedding: [0.80, 0, 0.60] },
+    ];
+
+    const bToAOnlyUnits = buildBidirectionalCandidateAlignment({
+      chunksA: bToAOnly_A,
+      chunksB: bToAOnly_B,
+      similarityModerate: 0.65,
+      similarityHigh: 0.85,
+      topK: 2,
+    });
+
+    // B2 should NOT be matched to A0 because A0's topK=2 in edgesAtoB are B0 and B1!
+    // B2 is a B->A-only candidate and must remain an "added" unit
+    const b2Unit = bToAOnlyUnits.find((u) => u.chunksB.some((c) => c.chunkIndex === 2));
+    assert(
+      b2Unit && b2Unit.type === "added",
+      "Defect 1 Fix: B->A-only relationship is NOT incorrectly promoted to bidirectional match (remains 'added')"
+    );
+
+    // Case 3: A->B-only relationship must NOT be promoted to bidirectional match
+    // A2 has candidate B0 (sim=0.80), but B0's topK=2 candidates in edgesBtoA are A0 (1.0) and A1 (0.998)
+    const aToBOnly_A = [
+      { chunkIndex: 0, content: "Clause A0", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Clause A1", embedding: [0.99, 0.05, 0] },
+      { chunkIndex: 2, content: "Clause A2 weak to B0", embedding: [0.80, 0, 0.60] },
+    ];
+    const aToBOnly_B = [
+      { chunkIndex: 0, content: "Clause B0", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Clause B1", embedding: [0, 1, 0] },
+    ];
+
+    const aToBOnlyUnits = buildBidirectionalCandidateAlignment({
+      chunksA: aToBOnly_A,
+      chunksB: aToBOnly_B,
+      similarityModerate: 0.65,
+      similarityHigh: 0.85,
+      topK: 2,
+    });
+
+    const a2Unit = aToBOnlyUnits.find((u) => u.chunksA.some((c) => c.chunkIndex === 2));
+    assert(
+      a2Unit && a2Unit.type === "removed",
+      "Defect 1 Fix: A->B-only relationship is NOT incorrectly promoted to bidirectional match (remains 'removed')"
+    );
+
+    // ----------------------------------------------------
+    // TEST SUITE 3.2: Focused Verification for Defect 2 (Adjacent Context Padding)
+    // ----------------------------------------------------
+    console.log("\n--- 3.2 Focused Verification for Defect 2: Adjacent Context Padding ---");
+
+    const contextDocA = [
+      { chunkIndex: 0, content: "First chunk A", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Middle chunk A", embedding: [0, 1, 0] },
+      { chunkIndex: 2, content: "Last chunk A", embedding: [0, 0, 1] },
+    ];
+    const contextDocB = [
+      { chunkIndex: 0, content: "First chunk B (matches A0)", embedding: [1, 0, 0] },
+      { chunkIndex: 1, content: "Middle chunk B (matches A1)", embedding: [0, 1, 0] },
+      { chunkIndex: 2, content: "Brand new isolated chunk in B", embedding: [0.577, 0.577, 0.577] },
+    ];
+
+    const contextUnits = buildBidirectionalCandidateAlignment({
+      chunksA: contextDocA,
+      chunksB: contextDocB,
+      similarityModerate: 0.65,
+      similarityHigh: 0.85,
+    });
+
+    // Check First Chunk (index 0): prev should be null, next should be chunk 1
+    const firstUnit = contextUnits.find(
+      (u) => u.chunksA.some((c) => c.chunkIndex === 0) && u.chunksB.some((c) => c.chunkIndex === 0)
+    );
+    assert(Boolean(firstUnit), "First chunk unit found");
+    assert(firstUnit.contextA.prev === null, "Defect 2 Fix: First chunk contextA.prev is null");
+    assert(firstUnit.contextA.next?.chunkIndex === 1, "Defect 2 Fix: First chunk contextA.next is chunk 1");
+    assert(firstUnit.contextB.prev === null, "Defect 2 Fix: First chunk contextB.prev is null");
+    assert(firstUnit.contextB.next?.chunkIndex === 1, "Defect 2 Fix: First chunk contextB.next is chunk 1");
+
+    // Check Middle Chunk (index 1): both prev and next must be present
+    const middleUnit = contextUnits.find(
+      (u) => u.chunksA.some((c) => c.chunkIndex === 1) && u.chunksB.some((c) => c.chunkIndex === 1)
+    );
+    assert(Boolean(middleUnit), "Middle chunk unit found");
+    assert(middleUnit.contextA.prev?.chunkIndex === 0, "Defect 2 Fix: Middle chunk contextA.prev is chunk 0");
+    assert(middleUnit.contextA.next?.chunkIndex === 2, "Defect 2 Fix: Middle chunk contextA.next is chunk 2");
+
+    // Check Last Chunk / Isolated Removed Chunk (A2): prev is chunk 1, next is null
+    const lastUnitA = contextUnits.find(
+      (u) => u.type === "removed" && u.chunksA.some((c) => c.chunkIndex === 2)
+    );
+    assert(Boolean(lastUnitA), "Isolated removed chunk unit (A2) found");
+    assert(lastUnitA.contextA.prev?.chunkIndex === 1, "Defect 2 Fix: Last chunk contextA.prev is chunk 1");
+    assert(lastUnitA.contextA.next === null, "Defect 2 Fix: Last chunk contextA.next is null");
+    assert(lastUnitA.contextB === null, "Defect 2 Fix: Isolated A chunk has contextB as null");
+
+    // Check Isolated Added Chunk (B2): prev is chunk 1, next is null
+    const isolatedUnitB = contextUnits.find(
+      (u) => u.type === "added" && u.chunksB.some((c) => c.chunkIndex === 2)
+    );
+    assert(Boolean(isolatedUnitB), "Isolated added chunk unit (B2) found");
+    assert(isolatedUnitB.contextB.prev?.chunkIndex === 1, "Defect 2 Fix: Isolated B chunk contextB.prev is chunk 1");
+    assert(isolatedUnitB.contextB.next === null, "Defect 2 Fix: Isolated B chunk contextB.next is null");
+    assert(isolatedUnitB.contextA === null, "Defect 2 Fix: Isolated B chunk has contextA as null");
+
+    // Check Grouped N:1 unit: context must be null for grouped side
+    const groupedDocA = [
+      { chunkIndex: 0, content: "Broad provision in A", embedding: [1, 0, 0] },
+    ];
+    const groupedDocB = [
+      { chunkIndex: 0, content: "Part 1 of provision in B", embedding: [0.95, 0.05, 0] },
+      { chunkIndex: 1, content: "Part 2 of provision in B", embedding: [0.94, 0.06, 0] },
+    ];
+    const groupedUnits = buildBidirectionalCandidateAlignment({
+      chunksA: groupedDocA,
+      chunksB: groupedDocB,
+      similarityModerate: 0.65,
+      similarityHigh: 0.85,
+    });
+    const nToOneUnit = groupedUnits.find((u) => u.chunksB.length > 1);
+    assert(Boolean(nToOneUnit), "Grouped N:1 unit identified");
+    assert(
+      nToOneUnit.contextB === null,
+      "Defect 2 Fix: Grouped N:1 unit has contextB as null (no redundant context on grouped side)"
+    );
+
+    // ----------------------------------------------------
+    // TEST SUITE 3.3: Focused Verification for Defect 3 (Parameterized maxOutputTokens)
+    // ----------------------------------------------------
+    console.log("\n--- 3.3 Focused Verification for Defect 3: Parameterized maxOutputTokens ---");
+
+    assert(
+      typeof callGeminiSummarizer === "function",
+      "Defect 3 Fix: callGeminiSummarizer is exported and callable"
     );
 
     // Direct comparison prompt test
