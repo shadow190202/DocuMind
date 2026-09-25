@@ -8,6 +8,9 @@ import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
 import { generateGroundedAnswer, CHAT_MODEL } from "@/lib/ai/gemini";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -17,25 +20,29 @@ const INSUFFICIENT_CONTEXT_MESSAGE =
 /**
  * POST /api/chat
  * Grounded AI Question Answering with Gemini 2.5 Flash & pgvector retrieval.
- *
- * Invariants & Requirements:
- * 1. Clerk Authentication: Enforces authenticated user session (returns 401 if unauthenticated).
- * 2. Zod Validation: Validates all request parameters with strict boundary limits.
- * 3. Strict Tenant Isolation: Verifies document and conversation ownership (uniform 404 for unauthorized).
- * 4. Document Access Verification: Caller must have active read access to target document.
- *    If an existing conversation is linked to a document whose access was revoked, reject with 404
- *    BEFORE vector retrieval or Gemini invocation.
- * 5. Zero-Result Cost Optimization: Skips calling Gemini entirely when 0 chunks meet similarity threshold.
- * 6. Free-Tier Rate-Limit Handling: Returns clear 429 status on quota/rate limits without aggressive retries.
- * 7. Grounded Answering: Answers generated exclusively from retrieved document chunks.
- * 8. Persistence: Atomically saves conversation, user message, and assistant message with JSONB sources.
- * 9. Zero Vector Exposure: Never leaks raw embedding vectors.
  */
 export async function POST(req) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "ai", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "AI operation rate limit exceeded. Please wait before retrying.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     let body;
@@ -331,7 +338,7 @@ export async function POST(req) {
       };
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       conversationId: saved.conversationId,
       userMessageId: saved.userMessageId,
@@ -354,14 +361,8 @@ export async function POST(req) {
         : null,
       insufficientContext: false,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/chat error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error.message || "An unexpected error occurred while answering your question.",
-      },
-      { status: error.status || 500 }
-    );
+    return handleApiError(error, req);
   }
 }

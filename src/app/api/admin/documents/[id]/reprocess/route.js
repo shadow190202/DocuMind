@@ -6,6 +6,9 @@ import { auth } from "@clerk/nextjs/server";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { executeDocumentProcessing } from "@/lib/document-processor";
 import { toClientSafeDocument } from "@/lib/auth/permissions";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +25,27 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;
+    }
+
+    const rateLimit = checkRateLimit(req, "ingest", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -105,17 +125,14 @@ export async function POST(req, { params }) {
       },
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Document reprocessed and derived caches invalidated successfully.",
       document: safeDoc,
       chunksCount: result.chunksCount,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/admin/documents/:id/reprocess error:", error);
-    return NextResponse.json(
-      { error: `Internal server error: ${error.message}` },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

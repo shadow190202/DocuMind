@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { documents, documentPermissions, users } from "@/db/schema";
 import { eq, and, or, desc } from "drizzle-orm";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +16,27 @@ export const dynamic = "force-dynamic";
  *
  * Server-only data safety: storageUrl is strictly omitted from client responses.
  */
-export async function GET() {
+export async function GET(req) {
   try {
     const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     if (!db) {
@@ -83,12 +100,9 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ documents: userDocs });
+    const response = NextResponse.json({ documents: userDocs });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch documents" },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

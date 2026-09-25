@@ -5,6 +5,9 @@ import { documentComparisons } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { verifyDualDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -13,18 +16,27 @@ const idSchema = z.string().uuid({ message: "Invalid comparison ID format. Must 
 /**
  * GET /api/documents/compare/:id
  * Retrieves a single document comparison by ID.
- *
- * MANDATORY CACHE AUTHORIZATION ORDER:
- * 1. Authenticate user.
- * 2. Fetch comparison row.
- * 3. Verify read access to BOTH source and target documents.
- *    If either document is inaccessible or access was revoked -> return 404.
  */
 export async function GET(req, { params }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -61,29 +73,42 @@ export async function GET(req, { params }) {
       return dualAccess.errorResponse;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       comparison,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/compare/:id error:", error);
-    return NextResponse.json(
-      { error: "Internal server error retrieving document comparison." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
 /**
  * DELETE /api/documents/compare/:id
  * Deletes a cached document comparison.
- * Authorized for comparison creator or owner of either document.
  */
 export async function DELETE(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -131,15 +156,12 @@ export async function DELETE(req, { params }) {
       .delete(documentComparisons)
       .where(eq(documentComparisons.id, id));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Comparison deleted successfully.",
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("DELETE /api/documents/compare/:id error:", error);
-    return NextResponse.json(
-      { error: "Internal server error deleting document comparison." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

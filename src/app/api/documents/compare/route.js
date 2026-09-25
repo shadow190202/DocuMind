@@ -15,30 +15,38 @@ import {
 } from "@/lib/validations/comparison";
 import { generateDocumentComparison, CHAT_MODEL } from "@/lib/ai/gemini";
 import { verifyDualDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/documents/compare
  * Generates or retrieves a cached grounded document comparison between two documents.
- *
- * Invariants & Requirements:
- * 1. Clerk Authentication: Enforces authenticated session; returns 401 if unauthenticated.
- * 2. Strict Dual Access Control: verifyDualDocumentAccess(read) runs BEFORE cache check.
- *    Returns uniform 404 if either document is missing or unauthorized.
- * 3. Processing Status: Both documents must have processingStatus === 'completed'.
- * 4. Cache Efficiency: If regenerate === false and a cached comparison exists, returns it
- *    without calling Gemini or burning free-tier quota.
- * 5. Safe Regeneration: Gemini call executes first. If it fails for ANY reason (429, timeout, network),
- *    the existing cached comparison in the database is strictly PRESERVED intact.
- * 6. Dual-Mode Scalability: Automatically runs Direct mode (<= 12 chunks each) or Hybrid Semantic Alignment (> 12 chunks).
- * 7. Usage Tracking: On generation, records operation: 'compare' in ai_usage_logs under requesting collaborator's user ID.
  */
 export async function POST(req) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "ai", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "AI operation rate limit exceeded. Please wait before retrying.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     // 1. Parse and validate request body
@@ -221,18 +229,15 @@ export async function POST(req) {
       return [upserted];
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       comparison: savedComparison,
       cached: false,
       mode,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/documents/compare error:", error);
-    return NextResponse.json(
-      { error: "Internal server error during document comparison." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
@@ -249,6 +254,21 @@ export async function GET(req) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const { searchParams } = new URL(req.url);
@@ -304,10 +324,11 @@ export async function GET(req) {
         .orderBy(desc(documentComparisons.updatedAt))
         .limit(10);
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         comparisons: recentComparisons,
       });
+      return applyRateLimitHeaders(response, rateLimit);
     }
 
     // Mode B: Retrieve specific comparison by pair
@@ -339,15 +360,12 @@ export async function GET(req) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       comparison,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/compare error:", error);
-    return NextResponse.json(
-      { error: "Internal server error retrieving document comparison." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

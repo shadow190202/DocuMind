@@ -28,6 +28,23 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(dashboardUrl);
     }
   }
+
+  const response = NextResponse.next();
+
+  // Production-aware HSTS:
+  // Strictly enforce HSTS ONLY when running in production AND served over HTTPS.
+  // In development, HSTS is omitted to ensure seamless http://localhost:3000 operation.
+  const isProd = process.env.NODE_ENV === "production";
+  const isHttps = req.nextUrl.protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
+
+  if (isProd && isHttps) {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    );
+  }
+
+  return response;
 });
 
 export const config = {

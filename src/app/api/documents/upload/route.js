@@ -7,15 +7,36 @@ import { getOrCreateCurrentUser } from "@/lib/auth-user";
 import {
   fileUploadSchema,
   getNormalizedFileType,
-  MAX_FILE_SIZE,
+  validateDocumentBuffer,
 } from "@/lib/validations/document";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export async function POST(req) {
   try {
-    const { userId } = await auth();
+    // 1. CSRF same-origin defense for mutative uploads
+    assertValidOrigin(req);
 
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 2. Application-level rate limiting for ingestion
+    const rateLimit = checkRateLimit(req, "ingest", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Upload rate limit exceeded. Please wait before retrying.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     if (!db) {
@@ -42,7 +63,7 @@ export async function POST(req) {
     const fileSize = file.size;
     const mimeType = file.type;
 
-    // Validate using Zod schema
+    // Validate metadata using Zod schema (20 MB limit enforced)
     const validationResult = fileUploadSchema.safeParse({
       filename,
       size: fileSize,
@@ -70,7 +91,13 @@ export async function POST(req) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Save to private local file storage
+    // Deep binary magic-byte and archive integrity validation (20 MB limit preserved)
+    const bufferValidation = validateDocumentBuffer(buffer, normalizedType);
+    if (!bufferValidation.valid) {
+      return NextResponse.json({ error: bufferValidation.error }, { status: 400 });
+    }
+
+    // Save to private local file storage with path traversal protection
     const { storageUrl } = await saveFile(buffer, filename, userId);
 
     // Insert document record into PostgreSQL via Drizzle
@@ -86,18 +113,16 @@ export async function POST(req) {
       })
       .returning();
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         message: "Document uploaded successfully.",
         document: insertedDoc,
       },
       { status: 201 }
     );
+
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/documents/upload error:", error);
-    return NextResponse.json(
-      { error: "Internal server error during document upload." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

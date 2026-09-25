@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { documentChunks } from "@/db/schema";
 import { eq, asc, isNotNull } from "drizzle-orm";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,21 @@ export async function GET(req, { params }) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -64,16 +81,14 @@ export async function GET(req, { params }) {
       createdAt: c.createdAt,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       chunks,
       totalChunks: chunks.length,
       documentId: id,
     });
+
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/:id/chunks error:", error);
-    return NextResponse.json(
-      { error: "Internal server error fetching document chunks." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

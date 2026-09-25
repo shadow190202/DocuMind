@@ -2,8 +2,9 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
-// Root storage directory outside public web root for security
-const STORAGE_ROOT = path.resolve(process.cwd(), "storage", "documents");
+// Root storage directories outside public web root for security
+export const STORAGE_ROOT = path.resolve(process.cwd(), "storage", "documents");
+export const EXTRACTED_ROOT = path.resolve(process.cwd(), "storage", "extracted");
 
 /**
  * Ensures the target directory exists.
@@ -16,6 +17,62 @@ function ensureDirectory(dirPath) {
 }
 
 /**
+ * Validates and safely resolves a relative path within an authorized root directory.
+ * Protects against directory traversal (../), null-byte injections, and symlink escapes.
+ *
+ * @param {string} rootDir - Root directory to contain within
+ * @param {string} relativePath - Target relative path
+ * @returns {string} - Verified absolute path
+ * @throws {Error} If path escapes root directory or contains illegal sequences
+ */
+export function safeResolvePath(rootDir, relativePath) {
+  if (!relativePath || typeof relativePath !== "string") {
+    throw new Error("Invalid storage path.");
+  }
+
+  // Reject null-byte injection attempts
+  if (relativePath.includes("\0") || relativePath.includes("%00")) {
+    throw new Error("Security violation: null byte detected in path.");
+  }
+
+  // Safe URL decoding
+  let decoded = relativePath;
+  try {
+    decoded = decodeURIComponent(relativePath);
+  } catch {
+    throw new Error("Security violation: malformed percent-encoded path.");
+  }
+
+  if (decoded.includes("\0")) {
+    throw new Error("Security violation: null byte detected in decoded path.");
+  }
+
+  const normalizedRoot = path.resolve(rootDir);
+  const resolvedPath = path.resolve(normalizedRoot, decoded);
+
+  // Containment assertion: resolved path MUST be strictly inside normalizedRoot
+  if (!resolvedPath.startsWith(normalizedRoot + path.sep)) {
+    throw new Error("Security violation: path traversal detected.");
+  }
+
+  // Symlink escape defense: if file exists on disk, assert realpath also stays within root
+  if (fs.existsSync(resolvedPath)) {
+    try {
+      const realPath = fs.realpathSync(resolvedPath);
+      if (!realPath.startsWith(normalizedRoot + path.sep)) {
+        throw new Error("Security violation: symlink escape detected.");
+      }
+    } catch (symErr) {
+      if (symErr.message?.includes("Security violation")) {
+        throw symErr;
+      }
+    }
+  }
+
+  return resolvedPath;
+}
+
+/**
  * Saves a file buffer securely to the user's isolated storage directory.
  * @param {Buffer} buffer - File buffer
  * @param {string} originalFilename - Original uploaded filename
@@ -24,7 +81,7 @@ function ensureDirectory(dirPath) {
  */
 export async function saveFile(buffer, originalFilename, userId) {
   const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const userDir = path.join(STORAGE_ROOT, sanitizedUserId);
+  const userDir = safeResolvePath(STORAGE_ROOT, sanitizedUserId);
   ensureDirectory(userDir);
 
   const fileId = crypto.randomUUID();
@@ -35,7 +92,7 @@ export async function saveFile(buffer, originalFilename, userId) {
     .substring(0, 50);
 
   const uniqueFileName = `${fileId}-${baseName}${ext}`;
-  const filePath = path.join(userDir, uniqueFileName);
+  const filePath = safeResolvePath(userDir, uniqueFileName);
 
   await fs.promises.writeFile(filePath, buffer);
 
@@ -55,12 +112,12 @@ export async function saveFile(buffer, originalFilename, userId) {
  * @returns {Promise<Buffer>}
  */
 export async function getFile(storageUrl) {
-  if (!storageUrl.startsWith("local://documents/")) {
+  if (!storageUrl || typeof storageUrl !== "string" || !storageUrl.startsWith("local://documents/")) {
     throw new Error("Invalid storage URL protocol.");
   }
 
-  const relativePath = storageUrl.replace("local://documents/", "");
-  const absolutePath = path.join(STORAGE_ROOT, relativePath);
+  const rawRelativePath = storageUrl.replace("local://documents/", "");
+  const absolutePath = safeResolvePath(STORAGE_ROOT, rawRelativePath);
 
   if (!fs.existsSync(absolutePath)) {
     throw new Error("File not found in storage.");
@@ -75,27 +132,24 @@ export async function getFile(storageUrl) {
  * @returns {Promise<boolean>}
  */
 export async function deleteFile(storageUrl) {
-  if (!storageUrl || !storageUrl.startsWith("local://documents/")) {
+  if (!storageUrl || typeof storageUrl !== "string" || !storageUrl.startsWith("local://documents/")) {
     return false;
   }
 
   try {
-    const relativePath = storageUrl.replace("local://documents/", "");
-    const absolutePath = path.join(STORAGE_ROOT, relativePath);
+    const rawRelativePath = storageUrl.replace("local://documents/", "");
+    const absolutePath = safeResolvePath(STORAGE_ROOT, rawRelativePath);
 
     if (fs.existsSync(absolutePath)) {
       await fs.promises.unlink(absolutePath);
       return true;
     }
   } catch (error) {
-    console.error("Failed to delete file from storage:", error);
+    console.error("Failed to delete file from storage:", error.message);
   }
 
   return false;
 }
-
-// Storage root for parsed and extracted text metadata
-const EXTRACTED_ROOT = path.resolve(process.cwd(), "storage", "extracted");
 
 /**
  * Saves extracted document text and metadata.
@@ -106,10 +160,11 @@ const EXTRACTED_ROOT = path.resolve(process.cwd(), "storage", "extracted");
  */
 export async function saveExtractedData(data, documentId, userId) {
   const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const userDir = path.join(EXTRACTED_ROOT, sanitizedUserId);
+  const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const userDir = safeResolvePath(EXTRACTED_ROOT, sanitizedUserId);
   ensureDirectory(userDir);
 
-  const filePath = path.join(userDir, `${documentId}.json`);
+  const filePath = safeResolvePath(userDir, `${sanitizedDocId}.json`);
   await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
   return filePath;
 }
@@ -121,15 +176,16 @@ export async function saveExtractedData(data, documentId, userId) {
  * @returns {Promise<Object|null>} - Parsed extracted data or null
  */
 export async function getExtractedData(documentId, userId) {
-  const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const filePath = path.join(EXTRACTED_ROOT, sanitizedUserId, `${documentId}.json`);
-
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-
-  const raw = await fs.promises.readFile(filePath, "utf8");
   try {
+    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filePath = safeResolvePath(EXTRACTED_ROOT, `${sanitizedUserId}/${sanitizedDocId}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    const raw = await fs.promises.readFile(filePath, "utf8");
     return JSON.parse(raw);
   } catch {
     return null;
@@ -145,15 +201,15 @@ export async function getExtractedData(documentId, userId) {
 export async function deleteExtractedData(documentId, userId) {
   try {
     const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filePath = path.join(EXTRACTED_ROOT, sanitizedUserId, `${documentId}.json`);
+    const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filePath = safeResolvePath(EXTRACTED_ROOT, `${sanitizedUserId}/${sanitizedDocId}.json`);
 
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
       return true;
     }
   } catch (error) {
-    console.error("Failed to delete extracted data from storage:", error);
+    console.error("Failed to delete extracted data from storage:", error.message);
   }
   return false;
 }
-

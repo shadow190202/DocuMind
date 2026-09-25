@@ -5,6 +5,9 @@ import { documentPermissions, users } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { shareDocumentSchema } from "@/lib/validations/permission";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,21 @@ export async function GET(req, { params }) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -53,7 +71,7 @@ export async function GET(req, { params }) {
       .where(eq(documentPermissions.documentId, id))
       .orderBy(desc(documentPermissions.createdAt));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       owner: {
         id: access.document.userId,
         name: access.document.ownerName || null,
@@ -61,12 +79,9 @@ export async function GET(req, { params }) {
       },
       collaborators,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/:id/permissions error:", error);
-    return NextResponse.json(
-      { error: "Failed to retrieve document permissions." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
@@ -77,9 +92,26 @@ export async function GET(req, { params }) {
  */
 export async function POST(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -99,12 +131,7 @@ export async function POST(req, { params }) {
       return access.errorResponse;
     }
 
-    let body = {};
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
-    }
+    const body = await req.json();
 
     const validation = shareDocumentSchema.safeParse(body);
     if (!validation.success) {
@@ -138,7 +165,6 @@ export async function POST(req, { params }) {
       );
     }
 
-    // MANDATORY SECURITY REQUIREMENT:
     // Authoritatively reject self-sharing based on resolved targetUser.id
     if (targetUser.id === access.document.userId) {
       return NextResponse.json(
@@ -168,7 +194,7 @@ export async function POST(req, { params }) {
       })
       .returning();
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         permission: {
           id: record.id,
@@ -184,11 +210,8 @@ export async function POST(req, { params }) {
       },
       { status: 201 }
     );
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/documents/:id/permissions error:", error);
-    return NextResponse.json(
-      { error: "Failed to share document." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

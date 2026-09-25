@@ -4,19 +4,36 @@ import { db } from "@/db";
 import { conversations, messages, documents } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { updateConversationSchema } from "@/lib/validations/conversation";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/conversations/:id
  * Retrieves a conversation and its messages with source citations.
- * Enforces strict user ownership (uniform 404 if unauthorized or non-existent).
  */
 export async function GET(req, { params }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -60,30 +77,43 @@ export async function GET(req, { params }) {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       conversation: conv,
       messages: conversationMessages,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/conversations/:id error:", error);
-    return NextResponse.json(
-      { error: "Internal server error fetching conversation." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
 /**
  * PATCH /api/conversations/:id
  * Renames a conversation title.
- * Enforces strict user ownership (uniform 404 if unauthorized or non-existent).
  */
 export async function PATCH(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -95,15 +125,7 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON request body." },
-        { status: 400 }
-      );
-    }
+    const body = await req.json();
 
     const validation = updateConversationSchema.safeParse(body);
     if (!validation.success) {
@@ -140,16 +162,13 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       conversation: updated,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("PATCH /api/conversations/:id error:", error);
-    return NextResponse.json(
-      { error: "Internal server error updating conversation." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
@@ -159,9 +178,26 @@ export async function PATCH(req, { params }) {
  */
 export async function DELETE(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -185,15 +221,12 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Conversation deleted successfully.",
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("DELETE /api/conversations/:id error:", error);
-    return NextResponse.json(
-      { error: "Internal server error deleting conversation." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

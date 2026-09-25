@@ -6,31 +6,38 @@ import { eq, and, asc } from "drizzle-orm";
 import { summarizeRequestSchema } from "@/lib/validations/summary";
 import { generateDocumentSummary, CHAT_MODEL } from "@/lib/ai/gemini";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/documents/:id/summarize
  * Generates or retrieves a cached grounded document summary.
- *
- * Invariants & Requirements:
- * 1. Clerk Authentication: Enforces authenticated session; returns 401 if unauthenticated.
- * 2. Strict Access Control: verifyDocumentAccess(read) runs BEFORE cache inspection.
- *    Returns uniform 404 for unauthorized documents (preventing cache inference).
- * 3. Processing Status: Document must have processingStatus === 'completed'.
- * 4. Cache Efficiency: If regenerate === false and a cached summary exists, returns it
- *    without calling Gemini or burning free-tier quota.
- * 5. Safe Regeneration: Gemini call executes first. If it fails for ANY reason (429, timeout, network),
- *    the existing cached summary in the database is strictly PRESERVED intact.
- * 6. Dual-Mode Scalability: Automatically runs Direct mode (<= 12 chunks) or Map -> Reduce (> 12 chunks).
- * 7. Usage Tracking: On generation, records operation: 'summarize' in ai_usage_logs with verified token metadata
- *    under the requesting collaborator's user ID.
  */
 export async function POST(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "ai", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "AI operation rate limit exceeded. Please wait before retrying.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -95,12 +102,13 @@ export async function POST(req, { params }) {
         );
 
       if (existingSummary) {
-        return NextResponse.json({
+        const response = NextResponse.json({
           success: true,
           summary: existingSummary,
           cached: true,
           mode: "cached",
         });
+        return applyRateLimitHeaders(response, rateLimit);
       }
     }
 
@@ -122,8 +130,7 @@ export async function POST(req, { params }) {
       );
     }
 
-    // 5. Generate summary using Gemini 2.5 Flash (Direct or Map -> Reduce)
-    // Critical: If this fails, the catch block exits and existing cached summary is preserved!
+    // 5. Generate summary using Gemini 2.5 Flash
     let generatedResult;
     try {
       generatedResult = await generateDocumentSummary({
@@ -131,13 +138,12 @@ export async function POST(req, { params }) {
         summaryType,
       });
     } catch (aiErr) {
-      console.error("Gemini summarization generation error:", aiErr);
       const isRateLimit = aiErr.isRateLimit || aiErr.status === 429;
       return NextResponse.json(
         {
           error: isRateLimit
             ? "Gemini free-tier rate limit reached. Please wait a few moments before trying again."
-            : `AI summarization failed: ${aiErr.message}`,
+            : "AI summarization failed. Please try again.",
           isRateLimit,
         },
         { status: isRateLimit ? 429 : 502 }
@@ -195,17 +201,14 @@ export async function POST(req, { params }) {
       return [upserted];
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       summary: savedSummary,
       cached: false,
       mode,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/documents/:id/summarize error:", error);
-    return NextResponse.json(
-      { error: "Internal server error during document summarization." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

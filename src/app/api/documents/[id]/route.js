@@ -8,6 +8,9 @@ import {
   verifyDocumentAccess,
   toClientSafeDocument,
 } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +24,21 @@ export async function GET(req, { params }) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -39,15 +57,12 @@ export async function GET(req, { params }) {
       return access.errorResponse;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       document: toClientSafeDocument(access.document, access),
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/[id] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error fetching document." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
@@ -58,9 +73,26 @@ export async function GET(req, { params }) {
  */
 export async function DELETE(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -91,15 +123,12 @@ export async function DELETE(req, { params }) {
     // Delete from database (cascades to chunks, permissions, summaries, comparisons)
     await db.delete(documents).where(eq(documents.id, id));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: "Document deleted successfully.",
       id,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("DELETE /api/documents/[id] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error deleting document." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

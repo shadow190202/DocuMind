@@ -3,20 +3,14 @@ import { auth } from "@clerk/nextjs/server";
 import { searchRequestSchema } from "@/lib/validations/search";
 import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/search
  * Vault-wide or multi-document semantic vector search.
- *
- * Invariants & Requirements:
- * 1. Requires Clerk user authentication (returns 401 if unauthenticated).
- * 2. Strictly validates request body with Zod schema (returns 400 on error).
- * 3. Enforces multi-tenant isolation at the database query level.
- * 4. Threshold filtering applied before LIMIT.
- * 5. Returns cosine similarity (1 - distance), never exposing raw vector embeddings.
- * 6. Optionally includes assembled RAG prompt context when includeContext=true.
  */
 export async function POST(req) {
   try {
@@ -25,15 +19,22 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON request body." },
-        { status: 400 }
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Search rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
       );
     }
+
+    const body = await req.json();
 
     const validation = searchRequestSchema.safeParse(body);
     if (!validation.success) {
@@ -80,14 +81,9 @@ export async function POST(req) {
       });
     }
 
-    return NextResponse.json(responsePayload);
+    const response = NextResponse.json(responsePayload);
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/search error:", error);
-    return NextResponse.json(
-      {
-        error: error.message || "Internal server error performing vector search.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

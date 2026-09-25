@@ -5,6 +5,8 @@ import {
   verifyDocumentAccess,
   toClientSafeDocument,
 } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,21 @@ export async function GET(req, { params }) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -46,22 +63,20 @@ export async function GET(req, { params }) {
     const safeDoc = toClientSafeDocument(doc, access);
 
     if (!extractedData) {
-      return NextResponse.json({
+      const response = NextResponse.json({
         document: safeDoc,
         extracted: null,
         message: "No extracted text available for this document yet.",
       });
+      return applyRateLimitHeaders(response, rateLimit);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       document: safeDoc,
       extracted: extractedData,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/:id/text error:", error);
-    return NextResponse.json(
-      { error: "Internal server error fetching document text." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

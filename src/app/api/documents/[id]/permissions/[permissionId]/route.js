@@ -8,24 +8,38 @@ import {
   permissionParamsSchema,
 } from "@/lib/validations/permission";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * PATCH /api/documents/:id/permissions/:permissionId
  * Updates a collaborator's role (read <-> write).
- *
- * MANDATORY SECURITY REQUIREMENTS:
- * 1. Owner authorization: only the document owner can update roles.
- * 2. Document scoping: DB operation MUST filter on BOTH permission.id AND permission.documentId.
- *    A permission UUID belonging to another document must not be actionable.
- * 3. Explicit updatedAt advancement: updatedAt must be updated to new Date().
  */
 export async function PATCH(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -57,12 +71,7 @@ export async function PATCH(req, { params }) {
       return access.errorResponse;
     }
 
-    let body = {};
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
-    }
+    const body = await req.json();
 
     const validation = updatePermissionSchema.safeParse(body);
     if (!validation.success) {
@@ -106,7 +115,7 @@ export async function PATCH(req, { params }) {
       .from(users)
       .where(eq(users.id, updated.userId));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       permission: {
         id: updated.id,
         documentId: updated.documentId,
@@ -119,29 +128,38 @@ export async function PATCH(req, { params }) {
       },
       message: "Permission updated successfully.",
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("PATCH /api/documents/:id/permissions/:permissionId error:", error);
-    return NextResponse.json(
-      { error: "Failed to update permission." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
 
 /**
  * DELETE /api/documents/:id/permissions/:permissionId
  * Revokes a collaborator's access, or allows a collaborator to leave a shared document.
- *
- * MANDATORY SECURITY REQUIREMENTS:
- * 1. Access authorization: only the document owner OR the collaborator themselves can revoke.
- * 2. Document scoping: DB query and delete MUST filter on BOTH permission.id AND permission.documentId.
- *    A permission UUID belonging to another document must not be actionable.
  */
 export async function DELETE(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -212,17 +230,14 @@ export async function DELETE(req, { params }) {
         )
       );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: isSelfCollaborator && !isOwner
         ? "You have left the shared document."
         : "Permission revoked successfully.",
       id: permissionId,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("DELETE /api/documents/:id/permissions/:permissionId error:", error);
-    return NextResponse.json(
-      { error: "Failed to revoke permission." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

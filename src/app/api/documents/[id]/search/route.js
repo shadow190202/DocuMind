@@ -1,33 +1,38 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@/db";
-import { documents } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { searchRequestSchema } from "@/lib/validations/search";
 import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/documents/:id/search
  * Single-document semantic vector search.
- *
- * Invariants & Requirements:
- * 1. Requires Clerk user authentication (returns 401 if unauthenticated).
- * 2. Uniform 404 for non-existent documents and documents belonging to other users.
- * 3. Enforces that document processing status is 'completed'.
- * 4. Strictly validates request body with Zod schema (returns 400 on error).
- * 5. Pre-LIMIT threshold filtering.
- * 6. Cosine similarity = 1 - distance; zero raw vector exposure.
- * 7. Optional RAG context assembly when includeContext=true.
  */
 export async function POST(req, { params }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Search rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -62,15 +67,7 @@ export async function POST(req, { params }) {
     }
 
     // 2. Parse and validate request body
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON request body." },
-        { status: 400 }
-      );
-    }
+    const body = await req.json();
 
     const validation = searchRequestSchema.safeParse({
       ...body,
@@ -121,14 +118,9 @@ export async function POST(req, { params }) {
       });
     }
 
-    return NextResponse.json(responsePayload);
+    const response = NextResponse.json(responsePayload);
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/documents/:id/search error:", error);
-    return NextResponse.json(
-      {
-        error: error.message || "Internal server error performing vector search.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

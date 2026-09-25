@@ -7,7 +7,13 @@ let db = null;
 export function getDb() {
   if (!db && process.env.DATABASE_URL) {
     // Disable prefetch for compatibility with connection poolers (Neon, Supabase, PgBouncer)
-    const client = postgres(process.env.DATABASE_URL, { prepare: false });
+    // Configure bounded pool and timeouts for resilience
+    const client = postgres(process.env.DATABASE_URL, {
+      prepare: false,
+      max: 10,
+      idle_timeout: 20,
+      connect_timeout: 10,
+    });
     db = drizzle(client, { schema });
   }
   return db;

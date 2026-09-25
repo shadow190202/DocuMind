@@ -5,6 +5,9 @@ import { eq, sql } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { updateUserRoleSchema } from "@/lib/validations/admin";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +23,27 @@ export const dynamic = "force-dynamic";
  */
 export async function PATCH(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;
+    }
+
+    const rateLimit = checkRateLimit(req, "mutation", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -122,16 +142,13 @@ export async function PATCH(req, { params }) {
       throw txError;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: `User role successfully updated to '${newRole}'.`,
       user: updatedUser,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("PATCH /api/admin/users/:id error:", error);
-    return NextResponse.json(
-      { error: `Internal server error: ${error.message}` },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

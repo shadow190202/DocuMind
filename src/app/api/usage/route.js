@@ -3,24 +3,35 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { aiUsageLogs, documents } from "@/db/schema";
 import { eq, sql, count } from "drizzle-orm";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/usage
  * Returns verified AI token usage and Document Vault capacity for the authenticated user.
- *
- * Invariants & Requirements:
- * 1. Clerk Authentication: Enforces authenticated session; returns 401 if unauthenticated.
- * 2. Strict Tenant Isolation: Aggregates strictly WHERE userId = :userId. Never leaks another user's data.
- * 3. Honest Metrics: Distinguishes between recorded tokens and questions with unavailable metadata.
- * 4. Clean Zeroes: Returns zero counters cleanly for brand new users without errors.
  */
-export async function GET() {
+export async function GET(req) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     // 1. Query aggregated AI usage stats for authenticated user
@@ -62,7 +73,7 @@ export async function GET() {
       usageResult?.tokensUnavailableCount || 0
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       aiUsage: {
         totalTokens: Number(usageResult?.totalTokens || 0),
@@ -84,14 +95,8 @@ export async function GET() {
         percentage: vaultPercentage,
       },
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/usage error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error.message || "Failed to retrieve usage statistics.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

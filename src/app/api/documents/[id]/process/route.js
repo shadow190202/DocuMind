@@ -12,6 +12,9 @@ import {
   verifyDocumentAccess,
   toClientSafeDocument,
 } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { assertValidOrigin } from "@/lib/auth/csrf";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +35,26 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req, { params }) {
   try {
+    assertValidOrigin(req);
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "ingest", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Processing rate limit exceeded. Please wait before retrying.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -63,26 +83,23 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: result.error }, { status: result.status || 500 });
     }
 
-    // 9. Fetch and return updated document record
+    // 3. Fetch and return updated document record
     const [updatedDoc] = await db
       .select()
       .from(documents)
       .where(eq(documents.id, id));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Document processed, chunked, and embedded successfully.",
       document: toClientSafeDocument(updatedDoc, access),
-      chunksCount: chunks.length,
+      chunksCount: result.chunksCount,
       embeddingModel: EMBEDDING_MODEL,
       embeddingDimensions: EXPECTED_DIMENSIONS,
-      metadata: extractedResult.metadata,
     });
+
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("POST /api/documents/:id/process unexpected error:", error);
-    return NextResponse.json(
-      { error: `Internal server error during document processing: ${error.message}` },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

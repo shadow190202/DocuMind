@@ -5,25 +5,35 @@ import { documentSummaries } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSummaryQuerySchema } from "@/lib/validations/summary";
 import { verifyDocumentAccess } from "@/lib/auth/permissions";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/documents/:id/summary
  * Retrieves cached summaries for a document.
- *
- * MANDATORY CACHE AUTHORIZATION ORDER:
- * 1. Authenticate user.
- * 2. Run verifyDocumentAccess(read).
- * 3. Reject unauthorized or unshared users with uniform 404 (preventing cache inference).
- * 4. Only then query document_summaries cache.
- * 5. Return cached summaries (0 Gemini calls, 0 token cost).
  */
 export async function GET(req, { params }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -75,15 +85,12 @@ export async function GET(req, { params }) {
       .where(and(...conditions))
       .orderBy(documentSummaries.createdAt);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       documentId: id,
       summaries,
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/documents/:id/summary error:", error);
-    return NextResponse.json(
-      { error: "Internal server error retrieving document summaries." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { conversations, messages, documents } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { exportConversationQuerySchema } from "@/lib/validations/conversation";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -18,18 +20,27 @@ function sanitizeFilename(name) {
 /**
  * GET /api/conversations/:id/export?format=markdown|json
  * Server-authorized export of conversation transcripts.
- *
- * Security & Data Sanitization Invariants:
- * 1. Authenticated session required (401 if unauthenticated).
- * 2. Strict user ownership enforced (uniform 404 for inaccessible or non-existent conversations).
- * 3. Sanitized output: strictly excludes Clerk user IDs, database UUIDs, raw vectors, and secrets.
- * 4. Preserves grounded citations and source metadata for verifiable audit trails.
  */
 export async function GET(req, { params }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const resolvedParams = await params;
@@ -88,7 +99,7 @@ export async function GET(req, { params }) {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
-    // 3. Build sanitized data structure (strictly excluding internal IDs, Clerk IDs, raw vectors)
+    // 3. Build sanitized data structure
     const documentScope = conv.documentName
       ? conv.documentName
       : "Entire Document Vault";
@@ -132,13 +143,14 @@ export async function GET(req, { params }) {
     // 4. Return formatted attachment based on requested format
     if (format === "json") {
       const jsonContent = JSON.stringify(sanitizedExportData, null, 2);
-      return new NextResponse(jsonContent, {
+      const res = new NextResponse(jsonContent, {
         status: 200,
         headers: {
           "Content-Type": "application/json; charset=utf-8",
           "Content-Disposition": `attachment; filename="documind-${fileSlug}.json"`,
         },
       });
+      return applyRateLimitHeaders(res, rateLimit);
     }
 
     // Default: Markdown export
@@ -179,18 +191,15 @@ export async function GET(req, { params }) {
       md += `---\n\n`;
     }
 
-    return new NextResponse(md, {
+    const res = new NextResponse(md, {
       status: 200,
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",
         "Content-Disposition": `attachment; filename="documind-${fileSlug}.md"`,
       },
     });
+    return applyRateLimitHeaders(res, rateLimit);
   } catch (error) {
-    console.error("GET /api/conversations/:id/export error:", error);
-    return NextResponse.json(
-      { error: "Internal server error exporting conversation." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

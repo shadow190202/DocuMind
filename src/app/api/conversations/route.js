@@ -4,28 +4,35 @@ import { db } from "@/db";
 import { conversations, messages, documents } from "@/db/schema";
 import { eq, and, sql, count, ilike, gte, asc, desc } from "drizzle-orm";
 import { listConversationsQuerySchema } from "@/lib/validations/conversation";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/conversations
- * Lists conversations for the authenticated user with server-side:
- * - Search by title
- * - Date range filtering (24h, 7d, 30d, all)
- * - Sorting (recent, oldest, most_questions, title)
- * - Pagination (limit, offset)
- * - Aggregated message count, question count, and latest message snippet
- *
- * Invariants:
- * 1. Strict Tenant Isolation: Enforces WHERE userId = :userId.
- * 2. Performance: Computes aggregations in a single SQL query; NO N+1 queries.
- * 3. Server-Side: Sorting and filtering applied in PostgreSQL before LIMIT/OFFSET.
+ * Lists conversations for the authenticated user.
  */
 export async function GET(req) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const { searchParams } = new URL(req.url);
@@ -159,7 +166,7 @@ export async function GET(req) {
       lastMessageRole: c.lastMessageRole || null,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       conversations: formattedConversations,
       pagination: {
@@ -169,11 +176,8 @@ export async function GET(req) {
         hasMore: offset + formattedConversations.length < total,
       },
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/conversations error:", error);
-    return NextResponse.json(
-      { error: "Internal server error fetching conversations." },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }

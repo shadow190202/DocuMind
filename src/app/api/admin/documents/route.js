@@ -5,6 +5,8 @@ import { sql, eq, and, or, ilike, desc, asc } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { adminDocumentsQuerySchema } from "@/lib/validations/admin";
+import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
+import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,21 @@ export async function GET(req) {
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;
+    }
+
+    const rateLimit = checkRateLimit(req, "general", userId);
+    if (!rateLimit.success) {
+      return applyRateLimitHeaders(
+        NextResponse.json(
+          {
+            error: "Too Many Requests",
+            message: "Rate limit exceeded. Please slow down.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        ),
+        rateLimit
+      );
     }
 
     const { searchParams } = new URL(req.url);
@@ -128,7 +145,7 @@ export async function GET(req) {
       },
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       documents: sanitizedDocs,
       pagination: {
@@ -138,11 +155,8 @@ export async function GET(req) {
         totalPages,
       },
     });
+    return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    console.error("GET /api/admin/documents error:", error);
-    return NextResponse.json(
-      { error: `Internal server error: ${error.message}` },
-      { status: 500 }
-    );
+    return handleApiError(error, req);
   }
 }
