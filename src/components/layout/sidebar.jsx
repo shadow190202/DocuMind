@@ -44,7 +44,11 @@ export function Sidebar({ className }) {
       totalTokens: 0,
       promptTokens: 0,
       completionTokens: 0,
+      operationsCount: 0,
+      requestsCount: 0,
       questionsCount: 0,
+      chatQuestionsCount: 0,
+      summariesCount: 0,
       tokensUnavailableCount: 0,
       hasUnavailableTokenCounts: false,
       lastUsedAt: null,
@@ -90,10 +94,13 @@ export function Sidebar({ className }) {
   const aiUsage = usageData.aiUsage;
   const vaultUsage = usageData.vaultUsage;
 
+  const requestsCount =
+    aiUsage.requestsCount ?? aiUsage.operationsCount ?? aiUsage.questionsCount ?? 0;
+
   // Relative application activity visual fill (smooth log-scale from 0% up to 100%)
   // Does NOT represent Google provider quota or any percentage denominator
   const activityFill =
-    aiUsage.questionsCount === 0 || aiUsage.totalTokens === 0
+    requestsCount === 0 || aiUsage.totalTokens === 0
       ? 0
       : Math.min(
           100,
@@ -229,10 +236,13 @@ export function Sidebar({ className }) {
                 <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
                 AI Usage
               </span>
-              <span className="text-slate-500">
-                {aiUsage.questionsCount === 1
-                  ? "1 question"
-                  : `${aiUsage.questionsCount.toLocaleString()} questions`}
+              <span
+                className="text-slate-500 cursor-default"
+                title={`Chat Questions: ${aiUsage.chatQuestionsCount ?? 0}, Summaries: ${aiUsage.summariesCount ?? 0}`}
+              >
+                {requestsCount === 1
+                  ? "1 AI request"
+                  : `${requestsCount.toLocaleString()} AI requests`}
               </span>
             </div>
 
@@ -265,7 +275,7 @@ export function Sidebar({ className }) {
             <HardDrive className="w-5 h-5 text-blue-500" />
           </div>
           <div
-            title={`AI Usage: ${aiUsage.questionsCount} questions, ${aiUsage.totalTokens.toLocaleString()} tokens used. Usage tracked by DocuMind. Provider-side quota may differ.`}
+            title={`AI Usage: ${requestsCount} AI requests, ${aiUsage.totalTokens.toLocaleString()} tokens used. Usage tracked by DocuMind. Provider-side quota may differ.`}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-default"
           >
             <Sparkles className="w-5 h-5 text-indigo-500" />

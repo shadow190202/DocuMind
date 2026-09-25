@@ -22,6 +22,11 @@ import {
   generateDocumentSummary,
   CHAT_MODEL,
 } from "../src/lib/ai/gemini.js";
+import {
+  parseMarkdownBoldSegments,
+  isMarkdownTable,
+  parseTableCells,
+} from "../src/lib/markdown.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -517,7 +522,147 @@ async function runPhase11Verification() {
     const tsFound = scanForTs(path.resolve(__dirname, "../src"));
     assert(tsFound.length === 0, "Zero .ts or .tsx files in src/ directory (100% pure JavaScript)");
 
-    console.log("\n==================================================");
+    console.log("JavaScript and repository invariant tests passed!\n");
+
+    // ----------------------------------------------------
+    // TEST SUITE 11: Phase 11.1 QA Polish & Refinements
+    // ----------------------------------------------------
+    console.log("--- 11. Testing Phase 11.1 QA Polish & Refinements ---");
+
+    // 11.1: Real-time AI usage update event dispatch
+    const summaryTabSrc = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/documents/summary-tab.jsx"),
+      "utf8"
+    );
+    assert(
+      summaryTabSrc.includes('new CustomEvent("documind:ai-usage-updated")'),
+      "SummaryTab dispatches documind:ai-usage-updated event after generation"
+    );
+    assert(
+      summaryTabSrc.includes("if (data.summary)") &&
+        summaryTabSrc.indexOf('new CustomEvent("documind:ai-usage-updated")') >
+          summaryTabSrc.indexOf("if (data.summary)"),
+      "Usage event dispatched strictly inside successful data.summary block"
+    );
+
+    // 11.2: Markdown table detection and cell parsing
+    const standardTable = `| Dimension | Support |
+| --- | --- |
+| Executive | Yes |
+| Detailed | Yes |`;
+    assert(isMarkdownTable(standardTable) === true, "isMarkdownTable recognizes standard markdown table");
+
+    const alignedTable = `| Date | Event | Status |
+| :--- | :---: | ---: |
+| 2026-09-25 | Phase 11.1 QA | Complete |`;
+    assert(isMarkdownTable(alignedTable) === true, "isMarkdownTable recognizes colon-aligned separator table");
+
+    const plainParagraph = "This is a regular paragraph with a | character in normal prose.";
+    assert(isMarkdownTable(plainParagraph) === false, "isMarkdownTable rejects prose containing single pipe");
+
+    const parsedCells = parseTableCells("| Cell A |   Cell B with spaces   | Cell C |");
+    assert(
+      parsedCells.length === 3 &&
+        parsedCells[0] === "Cell A" &&
+        parsedCells[1] === "Cell B with spaces" &&
+        parsedCells[2] === "Cell C",
+      "parseTableCells cleans and trims cells cleanly"
+    );
+
+    // 11.3: Markdown bold parsing
+    const plainSegments = parseMarkdownBoldSegments("Normal unformatted text");
+    assert(
+      plainSegments.length === 1 && plainSegments[0].text === "Normal unformatted text" && !plainSegments[0].bold,
+      "parseMarkdownBoldSegments returns plain segment when no bold markers present"
+    );
+
+    const boldSegments = parseMarkdownBoldSegments("Notice: **High Priority** milestone scheduled for **Q4 2026**.");
+    assert(
+      boldSegments.length === 5 &&
+        boldSegments[0].text === "Notice: " && !boldSegments[0].bold &&
+        boldSegments[1].text === "High Priority" && boldSegments[1].bold &&
+        boldSegments[2].text === " milestone scheduled for " && !boldSegments[2].bold &&
+        boldSegments[3].text === "Q4 2026" && boldSegments[3].bold &&
+        boldSegments[4].text === "." && !boldSegments[4].bold,
+      "parseMarkdownBoldSegments parses multiple bold tokens in exact sequence"
+    );
+
+    // 11.4: Neutral AI usage labeling & separate operation counts
+    const sidebarSrc = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/layout/sidebar.jsx"),
+      "utf8"
+    );
+    assert(
+      sidebarSrc.includes("AI requests") || sidebarSrc.includes("AI operations"),
+      "Sidebar UI uses neutral AI requests/operations label instead of questions"
+    );
+    assert(
+      sidebarSrc.includes("Chat Questions:") && sidebarSrc.includes("Summaries:"),
+      "Sidebar exposes chat vs summary breakdown in tooltip"
+    );
+
+    // Seed a chat operation log alongside the existing summarize log for Alice
+    await db.insert(aiUsageLogs).values({
+      userId: testUserAlice,
+      model: CHAT_MODEL,
+      operation: "chat",
+      promptTokens: 250,
+      completionTokens: 80,
+      totalTokens: 330,
+    });
+
+    const [aliceBreakdown] = await db
+      .select({
+        operationsCount: count(aiUsageLogs.id),
+        chatQuestionsCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'chat' THEN 1 END)::integer`,
+        summariesCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'summarize' THEN 1 END)::integer`,
+      })
+      .from(aiUsageLogs)
+      .where(eq(aiUsageLogs.userId, testUserAlice));
+
+    assert(
+      Number(aliceBreakdown.chatQuestionsCount) >= 1,
+      "PostgreSQL counts chat questions separately (operation='chat')"
+    );
+    assert(
+      Number(aliceBreakdown.summariesCount) >= 1,
+      "PostgreSQL counts document summaries separately (operation='summarize')"
+    );
+    assert(
+      Number(aliceBreakdown.operationsCount) ===
+        Number(aliceBreakdown.chatQuestionsCount) + Number(aliceBreakdown.summariesCount),
+      "Total operationsCount strictly equals chatQuestionsCount + summariesCount"
+    );
+
+    // 11.5: Whitespace-only chunk defense
+    let whitespaceErrorCaught = false;
+    try {
+      await generateDocumentSummary({
+        chunks: [
+          { chunkIndex: 0, content: "   \n\t   " },
+          { chunkIndex: 1, content: "" },
+        ],
+      });
+    } catch (wsErr) {
+      whitespaceErrorCaught = wsErr.message.includes("No non-empty document chunks");
+    }
+    assert(
+      whitespaceErrorCaught,
+      "generateDocumentSummary rejects whitespace-only chunks with descriptive error"
+    );
+
+    let emptyChunksErrorCaught = false;
+    try {
+      await generateDocumentSummary({ chunks: [] });
+    } catch (empErr) {
+      emptyChunksErrorCaught = empErr.message.includes("No document chunks provided");
+    }
+    assert(
+      emptyChunksErrorCaught,
+      "generateDocumentSummary rejects empty chunks array"
+    );
+
+    console.log("Phase 11.1 QA polish & refinement tests passed!\n");
     console.log(` ALL PHASE 11 VERIFICATIONS PASSED (${passedTests}/${totalTests})`);
     console.log("==================================================\n");
   } finally {

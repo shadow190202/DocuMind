@@ -84,6 +84,38 @@ const SUMMARY_DIMENSIONS = [
   },
 ];
 
+import {
+  parseMarkdownBoldSegments,
+  isMarkdownTable,
+  parseTableCells,
+} from "@/lib/markdown";
+
+export { parseMarkdownBoldSegments, isMarkdownTable, parseTableCells };
+
+/**
+ * Lightweight inline markdown formatter that converts **bold text** to <strong>.
+ * Preserves plain text without injecting HTML or heavy dependencies.
+ */
+export function renderFormattedText(text) {
+  if (typeof text !== "string" || !text.includes("**")) {
+    return text;
+  }
+
+  const segments = parseMarkdownBoldSegments(text);
+  return segments.map((seg, idx) =>
+    seg.bold ? (
+      <strong
+        key={`bold-${idx}`}
+        className="font-semibold text-slate-900 dark:text-slate-100"
+      >
+        {seg.text}
+      </strong>
+    ) : (
+      seg.text
+    )
+  );
+}
+
 export function SummaryTab({ documentId, document }) {
   const [activeType, setActiveType] = useState("executive");
   const [summariesMap, setSummariesMap] = useState({});
@@ -153,6 +185,11 @@ export function SummaryTab({ documentId, document }) {
           ...prev,
           [activeType]: data.summary,
         }));
+
+        // Dispatch real-time AI usage update event only on successful generation
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("documind:ai-usage-updated"));
+        }
       }
     } catch (err) {
       console.error("Summarization error:", err);
@@ -398,25 +435,80 @@ export function SummaryTab({ documentId, document }) {
                 const trimmed = block.trim();
                 if (!trimmed) return null;
 
+                // Markdown Tables
+                if (isMarkdownTable(trimmed)) {
+                  const lines = trimmed
+                    .split("\n")
+                    .map((l) => l.trim())
+                    .filter(Boolean);
+                  const sepIdx = lines.findIndex(
+                    (line, i) =>
+                      i > 0 &&
+                      (/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/.test(line) ||
+                        (/^[\s|:-]+$/.test(line) && line.includes("-") && line.includes("|")))
+                  );
+
+                  const headerLines = sepIdx !== -1 ? lines.slice(0, sepIdx) : [lines[0]];
+                  const bodyLines = sepIdx !== -1 ? lines.slice(sepIdx + 1) : lines.slice(1);
+
+                  return (
+                    <div
+                      key={idx}
+                      className="my-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm"
+                    >
+                      <table className="w-full text-left text-xs md:text-sm border-collapse">
+                        <thead className="bg-slate-50 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-800">
+                          {headerLines.map((hLine, hIdx) => (
+                            <tr key={`th-row-${hIdx}`}>
+                              {parseTableCells(hLine).map((cell, cIdx) => (
+                                <th
+                                  key={`th-${cIdx}`}
+                                  className="px-3.5 py-2.5 font-semibold text-slate-900 dark:text-slate-100"
+                                >
+                                  {renderFormattedText(cell)}
+                                </th>
+                              ))}
+                            </tr>
+                          ))}
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                          {bodyLines.map((bLine, bIdx) => (
+                            <tr
+                              key={`tb-row-${bIdx}`}
+                              className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors"
+                            >
+                              {parseTableCells(bLine).map((cell, cIdx) => (
+                                <td key={`td-${cIdx}`} className="px-3.5 py-2">
+                                  {renderFormattedText(cell)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                }
+
                 // Headers
                 if (trimmed.startsWith("### ")) {
                   return (
                     <h3 key={idx} className="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 mb-2">
-                      {trimmed.replace(/^###\s+/, "")}
+                      {renderFormattedText(trimmed.replace(/^###\s+/, ""))}
                     </h3>
                   );
                 }
                 if (trimmed.startsWith("## ")) {
                   return (
                     <h2 key={idx} className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-6 mb-3 pb-1 border-b border-slate-100 dark:border-slate-800">
-                      {trimmed.replace(/^##\s+/, "")}
+                      {renderFormattedText(trimmed.replace(/^##\s+/, ""))}
                     </h2>
                   );
                 }
                 if (trimmed.startsWith("# ")) {
                   return (
                     <h1 key={idx} className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-6 mb-3">
-                      {trimmed.replace(/^#\s+/, "")}
+                      {renderFormattedText(trimmed.replace(/^#\s+/, ""))}
                     </h1>
                   );
                 }
@@ -428,7 +520,7 @@ export function SummaryTab({ documentId, document }) {
                     <ul key={idx} className="space-y-1.5 my-3 list-disc pl-5 text-slate-700 dark:text-slate-300">
                       {items.map((it, itIdx) => (
                         <li key={itIdx}>
-                          {it.replace(/^[-*]\s+/, "")}
+                          {renderFormattedText(it.replace(/^[-*]\s+/, ""))}
                         </li>
                       ))}
                     </ul>
@@ -438,7 +530,7 @@ export function SummaryTab({ documentId, document }) {
                 // Standard Paragraph
                 return (
                   <p key={idx} className="text-slate-700 dark:text-slate-300 my-3 leading-relaxed">
-                    {trimmed}
+                    {renderFormattedText(trimmed)}
                   </p>
                 );
               })}

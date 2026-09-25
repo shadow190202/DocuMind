@@ -29,7 +29,9 @@ export async function GET() {
         totalTokens: sql`COALESCE(SUM(${aiUsageLogs.totalTokens}), 0)::integer`,
         promptTokens: sql`COALESCE(SUM(${aiUsageLogs.promptTokens}), 0)::integer`,
         completionTokens: sql`COALESCE(SUM(${aiUsageLogs.completionTokens}), 0)::integer`,
-        questionsCount: count(aiUsageLogs.id),
+        operationsCount: count(aiUsageLogs.id),
+        chatQuestionsCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'chat' THEN 1 END)::integer`,
+        summariesCount: sql`COUNT(CASE WHEN ${aiUsageLogs.operation} = 'summarize' THEN 1 END)::integer`,
         tokensUnavailableCount: sql`COUNT(CASE WHEN ${aiUsageLogs.totalTokens} IS NULL THEN 1 END)::integer`,
         lastUsedAt: sql`MAX(${aiUsageLogs.createdAt})`,
       })
@@ -51,7 +53,9 @@ export async function GET() {
       Math.round((documentCount / MAX_DOCUMENTS) * 100)
     );
 
-    const questionsCount = Number(usageResult?.questionsCount || 0);
+    const operationsCount = Number(usageResult?.operationsCount || 0);
+    const chatQuestionsCount = Number(usageResult?.chatQuestionsCount || 0);
+    const summariesCount = Number(usageResult?.summariesCount || 0);
     const tokensUnavailableCount = Number(
       usageResult?.tokensUnavailableCount || 0
     );
@@ -62,7 +66,11 @@ export async function GET() {
         totalTokens: Number(usageResult?.totalTokens || 0),
         promptTokens: Number(usageResult?.promptTokens || 0),
         completionTokens: Number(usageResult?.completionTokens || 0),
-        questionsCount,
+        operationsCount,
+        requestsCount: operationsCount,
+        questionsCount: operationsCount, // Maintained for backward compatibility
+        chatQuestionsCount,
+        summariesCount,
         tokensUnavailableCount,
         hasUnavailableTokenCounts: tokensUnavailableCount > 0,
         lastUsedAt: usageResult?.lastUsedAt || null,
