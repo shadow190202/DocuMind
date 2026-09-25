@@ -11,6 +11,10 @@ import {
   EMBEDDING_MODEL,
   EXPECTED_DIMENSIONS,
 } from "@/lib/ai/gemini";
+import {
+  verifyDocumentAccess,
+  toClientSafeDocument,
+} from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +26,12 @@ export const dynamic = "force-dynamic";
  * 3. Chunk text recursively with grounding metadata
  * 4. Generate & validate 768-dim embeddings via Gemini API (gemini-embedding-001)
  * 5. Atomically replace chunks in PostgreSQL via db.transaction()
+ *
+ * Reprocessing policy:
+ * - Owner: Allowed
+ * - Editor ('write'): Allowed (replaces authoritative chunk/embedding data, invalidates summaries/comparisons)
+ * - Viewer ('read'): 403 Forbidden
+ * - Unauthorized: 404 Not Found
  */
 export async function POST(req, { params }) {
   try {
@@ -30,23 +40,24 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id || params?.id;
     if (!id) {
       return NextResponse.json({ error: "Document ID required" }, { status: 400 });
     }
 
-    // 1. Verify document ownership
-    const [doc] = await db
-      .select()
-      .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+    // 1. Verify document access (requires 'write' permission: owner or editor)
+    const access = await verifyDocumentAccess({
+      documentId: id,
+      userId,
+      requiredPermission: "write",
+    });
 
-    if (!doc) {
-      return NextResponse.json(
-        { error: "Document not found or access denied." },
-        { status: 404 }
-      );
+    if (!access.authorized) {
+      return access.errorResponse;
     }
+
+    const doc = access.document;
 
     // 2. Mark document status as 'processing'
     await db
@@ -111,10 +122,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: errMsg }, { status: 422 });
     }
 
-    // 5. Save structured extracted data to isolated storage
+    // 5. Save structured extracted data to isolated storage using the document owner's user ID
     const extractedPayload = {
       documentId: doc.id,
-      userId,
+      userId: doc.userId,
       filename: doc.filename,
       fileType: doc.fileType,
       text: extractedResult.text,
@@ -123,7 +134,7 @@ export async function POST(req, { params }) {
       metadata: extractedResult.metadata,
     };
 
-    await saveExtractedData(extractedPayload, doc.id, userId);
+    await saveExtractedData(extractedPayload, doc.id, doc.userId);
 
     // 6. Divide text into semantic chunks
     const chunks = chunkDocument(extractedResult);
@@ -235,7 +246,7 @@ export async function POST(req, { params }) {
     return NextResponse.json({
       success: true,
       message: "Document processed, chunked, and embedded successfully.",
-      document: updatedDoc,
+      document: toClientSafeDocument(updatedDoc, access),
       chunksCount: chunks.length,
       embeddingModel: EMBEDDING_MODEL,
       embeddingDimensions: EXPECTED_DIMENSIONS,

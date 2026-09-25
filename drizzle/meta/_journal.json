@@ -43,6 +43,13 @@
       "when": 1790230000000,
       "tag": "0005_add_document_comparisons",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790240000000,
+      "tag": "0006_enhance_document_permissions",
+      "breakpoints": true
     }
   ]
 }

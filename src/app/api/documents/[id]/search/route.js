@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { searchRequestSchema } from "@/lib/validations/search";
 import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
+import { verifyDocumentAccess } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,25 +39,18 @@ export async function POST(req, { params }) {
       );
     }
 
-    // 1. Verify document ownership & status
-    const [doc] = await db
-      .select({
-        id: documents.id,
-        userId: documents.userId,
-        filename: documents.filename,
-        fileType: documents.fileType,
-        processingStatus: documents.processingStatus,
-      })
-      .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+    // 1. Verify document access & status
+    const access = await verifyDocumentAccess({
+      documentId: id,
+      userId,
+      requiredPermission: "read",
+    });
 
-    // Uniform 404 for unauthorized or non-existent document
-    if (!doc) {
-      return NextResponse.json(
-        { error: "Document not found or access denied." },
-        { status: 404 }
-      );
+    if (!access.authorized) {
+      return access.errorResponse;
     }
+
+    const doc = access.document;
 
     if (doc.processingStatus !== "completed") {
       return NextResponse.json(

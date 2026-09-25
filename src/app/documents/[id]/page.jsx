@@ -27,6 +27,7 @@ import {
   User,
   ChevronDown,
   ChevronUp,
+  Users,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { SummaryTab } from "@/components/documents/summary-tab";
+import { ShareDialog } from "@/components/documents/share-dialog";
 
 export default function DocumentDetailsPage() {
   const params = useParams();
@@ -58,6 +60,7 @@ export default function DocumentDetailsPage() {
   const [activeTab, setActiveTab] = useState("full"); // "full" | "pages" | "chunks" | "search" | "qa" | "metadata"
   const [copied, setCopied] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Semantic search state
@@ -357,15 +360,49 @@ export default function DocumentDetailsPage() {
               <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                 {document?.filename || "Document Details"}
               </h1>
+              {document && (
+                document.isOwner ? (
+                  <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs">
+                    Owner
+                  </Badge>
+                ) : document.role === "write" ? (
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 text-xs">
+                    Editor
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30 text-xs">
+                    Viewer
+                  </Badge>
+                )
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Share action: Owner only */}
+            {document?.isOwner && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowShareModal(true)}
+                className="gap-1.5"
+              >
+                <Users className="w-3.5 h-3.5" />
+                Share
+              </Button>
+            )}
+
+            {/* Reprocess action: Owner or Editor allowed; Viewer disabled */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleProcess}
-              disabled={processing || loading}
+              disabled={processing || loading || document?.role === "read"}
+              title={
+                document?.role === "read"
+                  ? "Only the owner or an editor can reprocess this document."
+                  : undefined
+              }
               className="gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${processing ? "animate-spin" : ""}`} />
@@ -376,14 +413,17 @@ export default function DocumentDetailsPage() {
                 : "Process Document"}
             </Button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteModal(true)}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {/* Delete action: Owner only */}
+            {document?.isOwner && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeleteModal(true)}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </header>
 
@@ -1220,6 +1260,15 @@ export default function DocumentDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Share Document Dialog */}
+      <ShareDialog
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        documentId={documentId}
+        documentTitle={document?.filename}
+        onPermissionsUpdated={fetchData}
+      />
     </div>
   );
 }

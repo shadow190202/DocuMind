@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
   Check,
   Copy,
+  Users,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -33,12 +34,15 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { ShareDialog } from "@/components/documents/share-dialog";
 
 export default function DocumentsPage() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterTab, setFilterTab] = useState("all"); // "all" | "mine" | "shared"
+  const [shareDoc, setShareDoc] = useState(null);
   const [docToDelete, setDocToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [processingId, setProcessingId] = useState(null);
@@ -216,9 +220,13 @@ export default function DocumentsPage() {
     }
   };
 
-  const filteredDocs = docs.filter((doc) =>
-    doc.filename.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredDocs = docs.filter((doc) => {
+    const matchesSearch = doc.filename.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (filterTab === "mine") return doc.isOwner;
+    if (filterTab === "shared") return !doc.isOwner;
+    return true;
+  });
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
@@ -257,8 +265,45 @@ export default function DocumentsPage() {
               <div>
                 <CardTitle>Document Vault</CardTitle>
                 <CardDescription>
-                  Your isolated document repository backed by PostgreSQL.
+                  Your document repository backed by PostgreSQL.
                 </CardDescription>
+              </div>
+
+              {/* Segmented Filter Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setFilterTab("all")}
+                  className={`px-3 py-1.5 rounded-md transition ${
+                    filterTab === "all"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  All ({docs.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterTab("mine")}
+                  className={`px-3 py-1.5 rounded-md transition ${
+                    filterTab === "mine"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  My Documents ({docs.filter((d) => d.isOwner).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterTab("shared")}
+                  className={`px-3 py-1.5 rounded-md transition ${
+                    filterTab === "shared"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  Shared with Me ({docs.filter((d) => !d.isOwner).length})
+                </button>
               </div>
 
               {/* Search Bar */}
@@ -329,12 +374,34 @@ export default function DocumentsPage() {
                               <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 shrink-0">
                                 <FileText className="w-4 h-4" />
                               </div>
-                              <Link
-                                href={`/documents/${doc.id}`}
-                                className="font-semibold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-xs block transition-colors"
-                              >
-                                {doc.filename}
-                              </Link>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/documents/${doc.id}`}
+                                    className="font-semibold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-xs block transition-colors"
+                                  >
+                                    {doc.filename}
+                                  </Link>
+                                  {doc.isOwner ? (
+                                    <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0">
+                                      Owner
+                                    </Badge>
+                                  ) : doc.role === "write" ? (
+                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0">
+                                      Editor
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30 text-[10px] px-1.5 py-0">
+                                      Viewer
+                                    </Badge>
+                                  )}
+                                </div>
+                                {!doc.isOwner && (
+                                  <span className="text-[11px] text-slate-400 block truncate">
+                                    Shared by {doc.owner?.name || doc.owner?.email || "colleague"}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </td>
                           <td className="py-3.5 pr-4">
@@ -363,14 +430,17 @@ export default function DocumentsPage() {
                                 <Eye className="w-4 h-4" />
                               </Link>
                             </Button>
+                            {/* Process Document: enabled for Owner and Editor; disabled for Viewer */}
                             <Button
                               variant="ghost"
                               size="icon"
                               className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                               onClick={(e) => handleProcess(doc.id, e)}
-                              disabled={processingId === doc.id}
+                              disabled={processingId === doc.id || doc.role === "read"}
                               title={
-                                doc.processingStatus === "completed"
+                                doc.role === "read"
+                                  ? "Only the owner or an editor can reprocess this document."
+                                  : doc.processingStatus === "completed"
                                   ? "Re-extract Text"
                                   : "Extract / Process Document"
                               }
@@ -381,15 +451,30 @@ export default function DocumentsPage() {
                                 <RefreshCw className="w-4 h-4" />
                               )}
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
-                              onClick={() => setDocToDelete(doc)}
-                              title="Delete Document"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {/* Share button: Owner only */}
+                            {doc.isOwner && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+                                onClick={() => setShareDoc(doc)}
+                                title="Share Document"
+                              >
+                                <Users className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {/* Delete button: Owner only */}
+                            {doc.isOwner && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
+                                onClick={() => setDocToDelete(doc)}
+                                title="Delete Document"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -691,6 +776,15 @@ export default function DocumentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Share Document Dialog */}
+      <ShareDialog
+        isOpen={!!shareDoc}
+        onClose={() => setShareDoc(null)}
+        documentId={shareDoc?.id}
+        documentTitle={shareDoc?.filename}
+        onPermissionsUpdated={fetchDocuments}
+      />
     </div>
   );
 }

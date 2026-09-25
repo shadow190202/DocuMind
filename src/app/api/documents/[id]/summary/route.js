@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { documents, documentSummaries } from "@/db/schema";
+import { documentSummaries } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSummaryQuerySchema } from "@/lib/validations/summary";
+import { verifyDocumentAccess } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/documents/:id/summary
- * Retrieves cached summaries for a document owned by the authenticated user.
+ * Retrieves cached summaries for a document.
  *
- * Invariants:
- * 1. Clerk Authentication: Enforces authenticated session; returns 401 if unauthenticated.
- * 2. Strict Tenant Isolation: Queries WHERE id = :id AND user_id = :userId.
- *    Returns uniform 404 for unowned or missing documents.
- * 3. Zero AI Overhead: Pure database retrieval; zero Gemini API calls, zero token usage.
+ * MANDATORY CACHE AUTHORIZATION ORDER:
+ * 1. Authenticate user.
+ * 2. Run verifyDocumentAccess(read).
+ * 3. Reject unauthorized or unshared users with uniform 404 (preventing cache inference).
+ * 4. Only then query document_summaries cache.
+ * 5. Return cached summaries (0 Gemini calls, 0 token cost).
  */
 export async function GET(req, { params }) {
   try {
@@ -24,22 +26,21 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id || params?.id;
     if (!id) {
       return NextResponse.json({ error: "Document ID is required." }, { status: 400 });
     }
 
-    // 1. Verify document ownership
-    const [doc] = await db
-      .select({ id: documents.id })
-      .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+    // 1. Authorize access BEFORE inspecting summary cache
+    const access = await verifyDocumentAccess({
+      documentId: id,
+      userId,
+      requiredPermission: "read",
+    });
 
-    if (!doc) {
-      return NextResponse.json(
-        { error: "Document not found or access denied." },
-        { status: 404 }
-      );
+    if (!access.authorized) {
+      return access.errorResponse;
     }
 
     // 2. Parse query parameters
@@ -59,10 +60,9 @@ export async function GET(req, { params }) {
 
     const { type } = validation.data;
 
-    // 3. Query cached summaries
+    // 3. Query cached summaries for this document
     const conditions = [
       eq(documentSummaries.documentId, id),
-      eq(documentSummaries.userId, userId),
     ];
 
     if (type && type !== "all") {

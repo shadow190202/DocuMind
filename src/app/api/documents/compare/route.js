@@ -14,6 +14,7 @@ import {
   getComparisonQuerySchema,
 } from "@/lib/validations/comparison";
 import { generateDocumentComparison, CHAT_MODEL } from "@/lib/ai/gemini";
+import { verifyDualDocumentAccess } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +24,15 @@ export const dynamic = "force-dynamic";
  *
  * Invariants & Requirements:
  * 1. Clerk Authentication: Enforces authenticated session; returns 401 if unauthenticated.
- * 2. Strict Tenant Isolation: Queries documents WHERE id IN (:sourceId, :targetId) AND user_id = :userId.
- *    Returns uniform 404 if either document is missing or not owned by user (preventing tenant probing).
+ * 2. Strict Dual Access Control: verifyDualDocumentAccess(read) runs BEFORE cache check.
+ *    Returns uniform 404 if either document is missing or unauthorized.
  * 3. Processing Status: Both documents must have processingStatus === 'completed'.
  * 4. Cache Efficiency: If regenerate === false and a cached comparison exists, returns it
  *    without calling Gemini or burning free-tier quota.
  * 5. Safe Regeneration: Gemini call executes first. If it fails for ANY reason (429, timeout, network),
  *    the existing cached comparison in the database is strictly PRESERVED intact.
  * 6. Dual-Mode Scalability: Automatically runs Direct mode (<= 12 chunks each) or Hybrid Semantic Alignment (> 12 chunks).
- * 7. Usage Tracking: On generation, records operation: 'compare' in ai_usage_logs with verified token metadata.
+ * 7. Usage Tracking: On generation, records operation: 'compare' in ai_usage_logs under requesting collaborator's user ID.
  */
 export async function POST(req) {
   try {
@@ -61,37 +62,20 @@ export async function POST(req) {
 
     const { sourceDocumentId, targetDocumentId, regenerate } = validation.data;
 
-    // 2. Verify dual document ownership and processing status in a single query
-    const docs = await db
-      .select({
-        id: documents.id,
-        filename: documents.filename,
-        processingStatus: documents.processingStatus,
-      })
-      .from(documents)
-      .where(
-        and(
-          inArray(documents.id, [sourceDocumentId, targetDocumentId]),
-          eq(documents.userId, userId)
-        )
-      );
+    // 2. Authorize dual document access BEFORE inspecting comparison cache
+    const dualAccess = await verifyDualDocumentAccess({
+      sourceDocumentId,
+      targetDocumentId,
+      userId,
+      requiredPermission: "read",
+    });
 
-    if (docs.length < 2) {
-      return NextResponse.json(
-        { error: "One or both documents not found or access denied." },
-        { status: 404 }
-      );
+    if (!dualAccess.authorized) {
+      return dualAccess.errorResponse;
     }
 
-    const sourceDoc = docs.find((d) => d.id === sourceDocumentId);
-    const targetDoc = docs.find((d) => d.id === targetDocumentId);
-
-    if (!sourceDoc || !targetDoc) {
-      return NextResponse.json(
-        { error: "One or both documents not found or access denied." },
-        { status: 404 }
-      );
-    }
+    const sourceDoc = dualAccess.source.document;
+    const targetDoc = dualAccess.target.document;
 
     if (
       sourceDoc.processingStatus !== "completed" ||
@@ -114,8 +98,7 @@ export async function POST(req) {
         .where(
           and(
             eq(documentComparisons.sourceDocumentId, sourceDocumentId),
-            eq(documentComparisons.targetDocumentId, targetDocumentId),
-            eq(documentComparisons.userId, userId)
+            eq(documentComparisons.targetDocumentId, targetDocumentId)
           )
         );
 
@@ -328,14 +311,24 @@ export async function GET(req) {
     }
 
     // Mode B: Retrieve specific comparison by pair
+    const dualAccess = await verifyDualDocumentAccess({
+      sourceDocumentId: sourceId,
+      targetDocumentId: targetId,
+      userId,
+      requiredPermission: "read",
+    });
+
+    if (!dualAccess.authorized) {
+      return dualAccess.errorResponse;
+    }
+
     const [comparison] = await db
       .select()
       .from(documentComparisons)
       .where(
         and(
           eq(documentComparisons.sourceDocumentId, sourceId),
-          eq(documentComparisons.targetDocumentId, targetId),
-          eq(documentComparisons.userId, userId)
+          eq(documentComparisons.targetDocumentId, targetId)
         )
       );
 

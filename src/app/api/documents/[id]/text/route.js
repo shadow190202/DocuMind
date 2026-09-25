@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@/db";
-import { documents } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { getExtractedData } from "@/lib/storage";
+import {
+  verifyDocumentAccess,
+  toClientSafeDocument,
+} from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/documents/:id/text
  * Retrieves the extracted text, pages, and metadata for a processed document.
+ * Authorized for Owner, Editor, and Viewer.
+ * Storage retrieval uses the document owner's user ID.
  */
 export async function GET(req, { params }) {
   try {
@@ -18,51 +21,40 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id || params?.id;
     if (!id) {
       return NextResponse.json({ error: "Document ID required" }, { status: 400 });
     }
 
-    // 1. Verify ownership
-    const [doc] = await db
-      .select()
-      .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+    const access = await verifyDocumentAccess({
+      documentId: id,
+      userId,
+      requiredPermission: "read",
+    });
 
-    if (!doc) {
-      return NextResponse.json(
-        { error: "Document not found or access denied." },
-        { status: 404 }
-      );
+    if (!access.authorized) {
+      return access.errorResponse;
     }
 
-    // 2. Fetch extracted data from storage
-    const extractedData = await getExtractedData(id, userId);
+    const doc = access.document;
+
+    // MANDATORY STORAGE REQUIREMENT:
+    // Extracted text is keyed by the document owner's user ID in storage.
+    const extractedData = await getExtractedData(id, doc.userId);
+
+    const safeDoc = toClientSafeDocument(doc, access);
 
     if (!extractedData) {
       return NextResponse.json({
-        document: {
-          id: doc.id,
-          filename: doc.filename,
-          fileType: doc.fileType,
-          processingStatus: doc.processingStatus,
-          errorMessage: doc.errorMessage,
-        },
+        document: safeDoc,
         extracted: null,
         message: "No extracted text available for this document yet.",
       });
     }
 
     return NextResponse.json({
-      document: {
-        id: doc.id,
-        filename: doc.filename,
-        fileType: doc.fileType,
-        processingStatus: doc.processingStatus,
-        errorMessage: doc.errorMessage,
-        fileSize: doc.fileSize,
-        createdAt: doc.createdAt,
-      },
+      document: safeDoc,
       extracted: extractedData,
     });
   } catch (error) {

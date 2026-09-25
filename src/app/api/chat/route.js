@@ -7,6 +7,7 @@ import { chatRequestSchema } from "@/lib/validations/chat";
 import { searchDocumentChunks } from "@/lib/ai/vector-search";
 import { assembleRagContext } from "@/lib/ai/rag-context";
 import { generateGroundedAnswer, CHAT_MODEL } from "@/lib/ai/gemini";
+import { verifyDocumentAccess } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,14 @@ const INSUFFICIENT_CONTEXT_MESSAGE =
  * 1. Clerk Authentication: Enforces authenticated user session (returns 401 if unauthenticated).
  * 2. Zod Validation: Validates all request parameters with strict boundary limits.
  * 3. Strict Tenant Isolation: Verifies document and conversation ownership (uniform 404 for unauthorized).
- * 4. Zero-Result Cost Optimization: Skips calling Gemini entirely when 0 chunks meet similarity threshold.
- * 5. Free-Tier Rate-Limit Handling: Returns clear 429 status on quota/rate limits without aggressive retries.
- * 6. Grounded Answering: Answers generated exclusively from retrieved document chunks.
- * 7. Persistence: Atomically saves conversation, user message, and assistant message with JSONB sources.
- * 8. Zero Vector Exposure: Never leaks raw embedding vectors.
+ * 4. Document Access Verification: Caller must have active read access to target document.
+ *    If an existing conversation is linked to a document whose access was revoked, reject with 404
+ *    BEFORE vector retrieval or Gemini invocation.
+ * 5. Zero-Result Cost Optimization: Skips calling Gemini entirely when 0 chunks meet similarity threshold.
+ * 6. Free-Tier Rate-Limit Handling: Returns clear 429 status on quota/rate limits without aggressive retries.
+ * 7. Grounded Answering: Answers generated exclusively from retrieved document chunks.
+ * 8. Persistence: Atomically saves conversation, user message, and assistant message with JSONB sources.
+ * 9. Zero Vector Exposure: Never leaks raw embedding vectors.
  */
 export async function POST(req) {
   try {
@@ -64,37 +68,29 @@ export async function POST(req) {
       maxContextTokens,
     } = validation.data;
 
-    // 1. If documentId is provided, verify document exists and is owned by authenticated user
+    // 1. If documentId is provided, verify active read access
     let scopedDocument = null;
     if (documentId) {
-      const [doc] = await db
-        .select({
-          id: documents.id,
-          userId: documents.userId,
-          filename: documents.filename,
-          processingStatus: documents.processingStatus,
-        })
-        .from(documents)
-        .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+      const access = await verifyDocumentAccess({
+        documentId,
+        userId,
+        requiredPermission: "read",
+      });
 
-      // Uniform 404 prevents document enumeration across tenants
-      if (!doc) {
-        return NextResponse.json(
-          { error: "Document not found or access denied." },
-          { status: 404 }
-        );
+      if (!access.authorized) {
+        return access.errorResponse;
       }
 
-      if (doc.processingStatus !== "completed") {
+      if (access.document.processingStatus !== "completed") {
         return NextResponse.json(
           {
-            error: `Document is not ready for question answering. Current status: ${doc.processingStatus}.`,
+            error: `Document is not ready for question answering. Current status: ${access.document.processingStatus}.`,
           },
           { status: 400 }
         );
       }
 
-      scopedDocument = doc;
+      scopedDocument = access.document;
     }
 
     // 2. If conversationId is provided, verify conversation exists and is owned by authenticated user
@@ -116,6 +112,25 @@ export async function POST(req) {
           { error: "Conversation not found or access denied." },
           { status: 404 }
         );
+      }
+
+      // MANDATORY CONVERSATION SECURITY:
+      // If conversation is linked to a document, verify current document access.
+      // If document access was revoked, reject with 404 BEFORE vector search or Gemini call.
+      if (conv.documentId) {
+        const convDocAccess = await verifyDocumentAccess({
+          documentId: conv.documentId,
+          userId,
+          requiredPermission: "read",
+        });
+
+        if (!convDocAccess.authorized) {
+          return convDocAccess.errorResponse;
+        }
+
+        if (!scopedDocument) {
+          scopedDocument = convDocAccess.document;
+        }
       }
 
       existingConversation = conv;

@@ -106,17 +106,29 @@ export const messages = pgTable(
 // ============================================================
 // 6. DOCUMENT PERMISSIONS TABLE (Sharing & Access Control)
 // ============================================================
-export const documentPermissions = pgTable("document_permissions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  permission: text("permission").default("read").notNull(), // 'read' | 'write'
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const documentPermissions = pgTable(
+  "document_permissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permission: text("permission").default("read").notNull(), // 'read' | 'write'
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("doc_permissions_doc_user_uniq_idx").on(
+      table.documentId,
+      table.userId
+    ),
+    index("doc_permissions_user_idx").on(table.userId),
+    index("doc_permissions_doc_idx").on(table.documentId),
+  ]
+);
 
 // ============================================================
 // 7. AI USAGE LOGS TABLE (Transparent Free-Tier Token Tracking)

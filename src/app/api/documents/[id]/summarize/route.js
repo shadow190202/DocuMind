@@ -5,6 +5,7 @@ import { documents, documentChunks, documentSummaries, aiUsageLogs } from "@/db/
 import { eq, and, asc } from "drizzle-orm";
 import { summarizeRequestSchema } from "@/lib/validations/summary";
 import { generateDocumentSummary, CHAT_MODEL } from "@/lib/ai/gemini";
+import { verifyDocumentAccess } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,15 +15,16 @@ export const dynamic = "force-dynamic";
  *
  * Invariants & Requirements:
  * 1. Clerk Authentication: Enforces authenticated session; returns 401 if unauthenticated.
- * 2. Strict Tenant Isolation: Queries WHERE id = :id AND user_id = :userId.
- *    Returns uniform 404 for unowned or missing documents.
+ * 2. Strict Access Control: verifyDocumentAccess(read) runs BEFORE cache inspection.
+ *    Returns uniform 404 for unauthorized documents (preventing cache inference).
  * 3. Processing Status: Document must have processingStatus === 'completed'.
  * 4. Cache Efficiency: If regenerate === false and a cached summary exists, returns it
  *    without calling Gemini or burning free-tier quota.
  * 5. Safe Regeneration: Gemini call executes first. If it fails for ANY reason (429, timeout, network),
  *    the existing cached summary in the database is strictly PRESERVED intact.
  * 6. Dual-Mode Scalability: Automatically runs Direct mode (<= 12 chunks) or Map -> Reduce (> 12 chunks).
- * 7. Usage Tracking: On generation, records operation: 'summarize' in ai_usage_logs with verified token metadata.
+ * 7. Usage Tracking: On generation, records operation: 'summarize' in ai_usage_logs with verified token metadata
+ *    under the requesting collaborator's user ID.
  */
 export async function POST(req, { params }) {
   try {
@@ -31,7 +33,8 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id || params?.id;
     if (!id) {
       return NextResponse.json({ error: "Document ID is required." }, { status: 400 });
     }
@@ -57,22 +60,18 @@ export async function POST(req, { params }) {
 
     const { summaryType, regenerate } = validation.data;
 
-    // 2. Verify document ownership and processing status
-    const [doc] = await db
-      .select({
-        id: documents.id,
-        filename: documents.filename,
-        processingStatus: documents.processingStatus,
-      })
-      .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+    // 2. Verify document access & processing status BEFORE cache check
+    const access = await verifyDocumentAccess({
+      documentId: id,
+      userId,
+      requiredPermission: "read",
+    });
 
-    if (!doc) {
-      return NextResponse.json(
-        { error: "Document not found or access denied." },
-        { status: 404 }
-      );
+    if (!access.authorized) {
+      return access.errorResponse;
     }
+
+    const doc = access.document;
 
     if (doc.processingStatus !== "completed") {
       return NextResponse.json(

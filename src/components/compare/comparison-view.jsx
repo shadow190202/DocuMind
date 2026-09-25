@@ -332,19 +332,27 @@ export function ComparisonView() {
                 <option value="">-- Select Base Document --</option>
                 {completedDocuments.map((doc) => (
                   <option key={doc.id} value={doc.id}>
-                    {doc.filename}
+                    {doc.filename}{!doc.isOwner ? ` (Shared by ${doc.owner?.name || doc.owner?.email || "colleague"})` : ""}
                   </option>
                 ))}
               </select>
 
               {sourceDoc && (
-                <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-400">
                   <span>Size: {formatFileSize(sourceDoc.fileSize)}</span>
                   <span>•</span>
                   <span>
                     Uploaded:{" "}
                     {new Date(sourceDoc.createdAt).toLocaleDateString()}
                   </span>
+                  {!sourceDoc.isOwner && (
+                    <>
+                      <span>•</span>
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                        Shared ({sourceDoc.role === "write" ? "Editor" : "Viewer"})
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -390,19 +398,27 @@ export function ComparisonView() {
                 <option value="">-- Select Revised Document --</option>
                 {completedDocuments.map((doc) => (
                   <option key={doc.id} value={doc.id}>
-                    {doc.filename} {doc.id === sourceId ? "(Selected as Base)" : ""}
+                    {doc.filename} {doc.id === sourceId ? "(Selected as Base)" : !doc.isOwner ? `(Shared by ${doc.owner?.name || doc.owner?.email || "colleague"})` : ""}
                   </option>
                 ))}
               </select>
 
               {targetDoc && (
-                <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-400">
                   <span>Size: {formatFileSize(targetDoc.fileSize)}</span>
                   <span>•</span>
                   <span>
                     Uploaded:{" "}
                     {new Date(targetDoc.createdAt).toLocaleDateString()}
                   </span>
+                  {!targetDoc.isOwner && (
+                    <>
+                      <span>•</span>
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                        Shared ({targetDoc.role === "write" ? "Editor" : "Viewer"})
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
