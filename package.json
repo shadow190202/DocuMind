@@ -10,7 +10,14 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "node src/db/migrate.js"
+    "db:migrate": "node src/db/migrate.js",
+    "test": "node scripts/run-all-tests.mjs",
+    "test:unit": "node scripts/tests/unit/run-unit-tests.mjs",
+    "test:integration": "node scripts/tests/integration/run-integration-tests.mjs",
+    "test:regressions": "node scripts/run-regressions.mjs",
+    "test:e2e": "playwright test",
+    "test:ai-live": "node scripts/tests/live-ai-smoke.mjs",
+    "test:all": "node scripts/run-all-tests.mjs --with-e2e"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.39.7",
@@ -29,6 +36,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.11",
     "postcss": "^8.4.47",

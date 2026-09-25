@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
 import { saveFile } from "@/lib/storage";
@@ -18,7 +18,7 @@ export async function POST(req) {
     // 1. CSRF same-origin defense for mutative uploads
     assertValidOrigin(req);
 
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -47,7 +47,7 @@ export async function POST(req) {
     }
 
     // Ensure user exists in our local PostgreSQL database for FK integrity
-    await getOrCreateCurrentUser();
+    await getOrCreateCurrentUser(req);
 
     const formData = await req.formData();
     const file = formData.get("file");

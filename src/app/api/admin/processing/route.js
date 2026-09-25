@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, getDb } from "@/db";
 import { documents, users } from "@/db/schema";
 import { sql, eq, desc } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
 import { handleApiError } from "@/lib/errors";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;

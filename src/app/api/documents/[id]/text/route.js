@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { getExtractedData } from "@/lib/storage";
 import {
   verifyDocumentAccess,
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req, { params }) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

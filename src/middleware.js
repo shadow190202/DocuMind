@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { parseE2ETestSession } from "./lib/auth/e2e-session.js";
 
 // Define public routes that do not require authentication
 const isPublicRoute = createRouteMatcher([
@@ -14,6 +15,21 @@ const isAdminRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // Controlled E2E Test Session Bypass (Active ONLY when DOCUMIND_E2E_MODE is explicitly enabled)
+  if (
+    process.env.DOCUMIND_E2E_MODE === "enabled" &&
+    process.env.DOCUMIND_E2E_SECRET &&
+    process.env.DOCUMIND_E2E_SECRET.length >= 16
+  ) {
+    const e2eSession = await parseE2ETestSession(req);
+    if (e2eSession?.userId) {
+      if (isAdminRoute(req) && e2eSession.role !== "admin") {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+      return NextResponse.next();
+    }
+  }
+
   // If the user is trying to access a protected route and is unauthenticated, redirect to sign-in
   if (!isPublicRoute(req)) {
     await auth.protect();

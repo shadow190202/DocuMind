@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, getDb } from "@/db";
 import { users, documents, messages, conversations, aiUsageLogs } from "@/db/schema";
 import { sql, eq, and, or, ilike, desc, asc } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { adminUsersQuerySchema } from "@/lib/validations/admin";
 import { checkRateLimit, applyRateLimitHeaders } from "@/lib/rate-limiter";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;
@@ -94,18 +94,18 @@ export async function GET(req) {
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         documentCount: sql`(
-          SELECT COUNT(*)::int FROM documents d WHERE d.user_id = ${users.id}
+          SELECT COUNT(*)::int FROM documents d WHERE d.user_id = users.id
         )`,
         questionsCount: sql`(
           SELECT COUNT(*)::int 
           FROM messages m 
           JOIN conversations c ON c.id = m.conversation_id 
-          WHERE c.user_id = ${users.id} AND m.role = 'user'
+          WHERE c.user_id = users.id AND m.role = 'user'
         )`,
         tokensUsed: sql`(
           SELECT COALESCE(SUM(l.total_tokens), 0)::bigint 
           FROM ai_usage_logs l 
-          WHERE l.user_id = ${users.id}
+          WHERE l.user_id = users.id
         )`,
       })
       .from(users)

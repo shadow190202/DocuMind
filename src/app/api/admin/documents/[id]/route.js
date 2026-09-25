@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, getDb } from "@/db";
 import { documents } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { deleteFile, deleteExtractedData } from "@/lib/storage";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { assertValidOrigin } from "@/lib/auth/csrf";
@@ -25,7 +25,7 @@ export async function DELETE(req, { params }) {
   try {
     assertValidOrigin(req);
 
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;

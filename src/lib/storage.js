@@ -59,7 +59,10 @@ export function safeResolvePath(rootDir, relativePath) {
   if (fs.existsSync(resolvedPath)) {
     try {
       const realPath = fs.realpathSync(resolvedPath);
-      if (!realPath.startsWith(normalizedRoot + path.sep)) {
+      const canonicalRoot = fs.existsSync(normalizedRoot)
+        ? fs.realpathSync(normalizedRoot)
+        : normalizedRoot;
+      if (!realPath.toLowerCase().startsWith(canonicalRoot.toLowerCase() + path.sep)) {
         throw new Error("Security violation: symlink escape detected.");
       }
     } catch (symErr) {

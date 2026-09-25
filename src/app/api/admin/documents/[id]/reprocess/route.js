@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, getDb } from "@/db";
 import { documents, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { verifyAdminAccess } from "@/lib/auth/admin";
 import { executeDocumentProcessing } from "@/lib/document-processor";
 import { toClientSafeDocument } from "@/lib/auth/permissions";
@@ -27,7 +27,7 @@ export async function POST(req, { params }) {
   try {
     assertValidOrigin(req);
 
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     const adminCheck = await verifyAdminAccess(userId);
     if (!adminCheck.authorized) {
       return adminCheck.errorResponse;

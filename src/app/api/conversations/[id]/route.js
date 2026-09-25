@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth/session";
 import { db } from "@/db";
 import { conversations, messages, documents } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req, { params }) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -96,7 +96,7 @@ export async function PATCH(req, { params }) {
   try {
     assertValidOrigin(req);
 
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -180,7 +180,7 @@ export async function DELETE(req, { params }) {
   try {
     assertValidOrigin(req);
 
-    const { userId } = await auth();
+    const { userId } = await getAuthSession(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
