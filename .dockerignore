@@ -1,0 +1,41 @@
+# Git & Version Control
+.git
+.gitignore
+
+# Environment & Secret Files (NEVER include in Docker images)
+.env
+.env*
+!.env.example
+
+# Dependencies (installed via npm ci inside Docker)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js Build Output
+.next
+out
+
+# Local Persistent Storage (mounted as host volume at runtime)
+storage/
+storage/documents/
+storage/extracted/
+
+# Test Suites, Runners & Mock Data
+scripts/tests/
+scripts/run-all-tests.mjs
+scripts/run-regressions.mjs
+test-results/
+playwright-report/
+playwright.config.js
+coverage/
+
+# Temporary & Cache Files
+.gemini/
+.vercel/
+*.dump
+*.tar.gz
+*.log
+.DS_Store
+Thumbs.db

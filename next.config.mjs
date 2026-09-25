@@ -8,18 +8,18 @@ const nextConfig = {
     const isProd = process.env.NODE_ENV === "production";
     // In production, omit 'unsafe-eval' for tighter security. In development, allow it for Fast Refresh.
     const scriptSrc = isProd
-      ? "'self' 'unsafe-inline' https://clerk.com https://*.clerk.accounts.dev"
-      : "'self' 'unsafe-eval' 'unsafe-inline' https://clerk.com https://*.clerk.accounts.dev";
+      ? "'self' 'unsafe-inline' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev"
+      : "'self' 'unsafe-eval' 'unsafe-inline' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev";
 
     const cspHeader = [
       "default-src 'self'",
       `script-src ${scriptSrc}`,
       "worker-src 'self' blob:",
-      "connect-src 'self' https://clerk.com https://*.clerk.accounts.dev https://generativelanguage.googleapis.com",
+      "connect-src 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://generativelanguage.googleapis.com",
       "img-src 'self' data: blob: https://img.clerk.com https://images.clerk.dev",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "frame-src 'self' https://clerk.com https://*.clerk.accounts.dev",
+      "frame-src 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev",
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",

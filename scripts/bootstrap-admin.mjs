@@ -1,103 +1,139 @@
-#!/usr/bin/env node
-
-/**
- * DocuMind Admin Bootstrap Script
- *
- * Explicitly sets a user's role to 'admin' in PostgreSQL.
- * This is an explicit, out-of-band administrative maintenance tool,
- * completely decoupled from ordinary HTTP runtime authorization.
- *
- * Usage:
- *   node scripts/bootstrap-admin.mjs <user-email-or-id>
- */
-
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, or } from "drizzle-orm";
-import { users } from "../src/db/schema.js";
+import { eq } from "drizzle-orm";
+import * as schema from "../src/db/schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "..");
 
-// Load .env.local
-const envLocalPath = path.resolve(__dirname, "../.env.local");
-if (fs.existsSync(envLocalPath)) {
-  const envContent = fs.readFileSync(envLocalPath, "utf8");
-  for (const line of envContent.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith("#")) {
-      const eqIdx = trimmed.indexOf("=");
-      if (eqIdx !== -1) {
-        const key = trimmed.slice(0, eqIdx).trim();
-        const value = trimmed.slice(eqIdx + 1).trim();
-        if (!process.env[key]) {
-          process.env[key] = value.replace(/^["'](.*)["']$/, "$1");
+// Load .env.local if present and DATABASE_URL is not already set
+if (!process.env.DATABASE_URL) {
+  const envLocalPath = path.resolve(rootDir, ".env.local");
+  if (fs.existsSync(envLocalPath)) {
+    const envContent = fs.readFileSync(envLocalPath, "utf8");
+    for (const line of envContent.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#")) {
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx !== -1) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          const value = trimmed.slice(eqIdx + 1).trim();
+          if (!process.env[key]) {
+            process.env[key] = value.replace(/^["'](.*)["']$/, "$1");
+          }
         }
       }
     }
   }
 }
 
-const targetIdentifier = process.argv[2]?.trim();
-
-if (!targetIdentifier) {
-  console.error("❌ Error: Target user email or ID required.");
-  console.log("Usage: node scripts/bootstrap-admin.mjs <email-or-userId>");
-  process.exit(1);
+/**
+ * Validates basic email address structure.
+ * @param {string} email
+ * @returns {boolean}
+ */
+function isValidEmail(email) {
+  if (!email || typeof email !== "string") return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
 }
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.error("❌ Error: DATABASE_URL is not set in environment or .env.local");
-  process.exit(1);
+/**
+ * Strips sensitive credentials from error messages.
+ * @param {string} str
+ * @returns {string}
+ */
+function sanitizeOutput(str) {
+  if (!str || typeof str !== "string") return "";
+  return str.replace(/postgres(?:ql)?:\/\/[^@\s]+@[^\s]+/gi, "[REDACTED_DATABASE_URL]");
 }
 
-const sqlClient = postgres(connectionString, { max: 1 });
-const db = drizzle(sqlClient);
+async function main() {
+  const args = process.argv.slice(2);
 
-async function bootstrapAdmin() {
-  console.log(`Searching for user with email or ID: '${targetIdentifier}'...`);
-
-  const [existingUser] = await db
-    .select()
-    .from(users)
-    .where(or(eq(users.email, targetIdentifier), eq(users.id, targetIdentifier)));
-
-  if (!existingUser) {
-    console.error(`❌ User not found in database: '${targetIdentifier}'`);
-    console.log("Note: The user must sign in to DocuMind at least once to create their local user row.");
+  if (args.length !== 1) {
+    console.error("❌ Invalid arguments.");
+    console.error("Usage: node scripts/bootstrap-admin.mjs <target-email>");
+    console.error("Example: node scripts/bootstrap-admin.mjs admin@example.com");
     process.exit(1);
   }
 
-  if (existingUser.role === "admin") {
-    console.log(`ℹ️ User '${existingUser.email}' (${existingUser.id}) is already an administrator.`);
-    process.exit(0);
+  const targetEmail = args[0].trim().toLowerCase();
+
+  if (!isValidEmail(targetEmail)) {
+    console.error(`❌ Invalid email format: "${args[0]}". Please provide a valid email address.`);
+    process.exit(1);
   }
 
-  const [updated] = await db
-    .update(users)
-    .set({
-      role: "admin",
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, existingUser.id))
-    .returning();
-
-  console.log("✅ Success! User promoted to administrator:");
-  console.log(`   ID:    ${updated.id}`);
-  console.log(`   Email: ${updated.email}`);
-  console.log(`   Role:  ${updated.role}`);
-  console.log(`   Updated: ${updated.updatedAt.toISOString()}`);
-}
-
-bootstrapAdmin()
-  .catch((err) => {
-    console.error("❌ Bootstrap failed with error:", err.message);
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    console.error("❌ Database connection error: DATABASE_URL is not set in the environment or .env.local.");
     process.exit(1);
-  })
-  .finally(async () => {
-    await sqlClient.end();
+  }
+
+  console.log(`Connecting to database to verify user "${targetEmail}"...`);
+
+  const sql = postgres(connectionString, {
+    prepare: false,
+    max: 1,
+    connect_timeout: 10,
   });
+
+  const db = drizzle(sql, { schema });
+
+  try {
+    // 1. Look up the existing user by email
+    const [existingUser] = await db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        name: schema.users.name,
+        role: schema.users.role,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.email, targetEmail));
+
+    if (!existingUser) {
+      console.error(
+        `❌ User not found: No user registered with email "${targetEmail}".\n` +
+          `   The user must first sign up / sign in via Clerk so their account record exists in PostgreSQL.\n` +
+          `   DocuMind strictly requires an existing user record and will never fabricate phantom users.`
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    // 2. Check if already an admin
+    if (existingUser.role === "admin") {
+      console.log(`ℹ️ User "${targetEmail}" (ID: ${existingUser.id}) is already an administrator.`);
+      console.log("   No changes were made.");
+      return;
+    }
+
+    // 3. Promote only this specific user to 'admin'
+    await db
+      .update(schema.users)
+      .set({
+        role: "admin",
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.users.id, existingUser.id));
+
+    console.log(`✅ Success: User "${targetEmail}" (ID: ${existingUser.id}) has been promoted to administrator.`);
+    console.log("   PostgreSQL authoritative authorization (users.role = 'admin') is active.");
+  } catch (error) {
+    console.error("❌ Database operation failed:", sanitizeOutput(error.message));
+    process.exitCode = 1;
+  } finally {
+    await sql.end();
+  }
+}
+
+main().catch((err) => {
+  console.error("❌ Fatal error:", sanitizeOutput(err.message));
+  process.exit(1);
+});
