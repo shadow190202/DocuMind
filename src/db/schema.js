@@ -14,32 +14,45 @@ import { relations } from "drizzle-orm";
 // ============================================================
 // 1. USERS TABLE (Linked to Clerk Authentication)
 // ============================================================
-export const users = pgTable("users", {
-  id: text("id").primaryKey(), // Clerk user ID (e.g., user_2xxx)
-  name: text("name"),
-  email: text("email").notNull(),
-  role: text("role").default("user").notNull(), // 'user' | 'admin'
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: text("id").primaryKey(), // Clerk user ID (e.g., user_2xxx)
+    name: text("name"),
+    email: text("email").notNull(),
+    role: text("role").default("user").notNull(), // 'user' | 'admin'
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("users_role_idx").on(table.role),
+  ]
+);
 
 // ============================================================
 // 2. DOCUMENTS TABLE
 // ============================================================
-export const documents = pgTable("documents", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  filename: text("filename").notNull(),
-  fileType: text("file_type").notNull(), // 'pdf' | 'docx' | 'txt' | 'csv'
-  fileSize: integer("file_size").notNull(), // Size in bytes
-  storageUrl: text("storage_url").notNull(),
-  processingStatus: text("processing_status").default("pending").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
-  errorMessage: text("error_message"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    filename: text("filename").notNull(),
+    fileType: text("file_type").notNull(), // 'pdf' | 'docx' | 'txt' | 'csv'
+    fileSize: integer("file_size").notNull(), // Size in bytes
+    storageUrl: text("storage_url").notNull(),
+    processingStatus: text("processing_status").default("pending").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("documents_status_created_idx").on(table.processingStatus, table.createdAt),
+    index("documents_created_idx").on(table.createdAt),
+  ]
+);
 
 // ============================================================
 // 3. DOCUMENT CHUNKS TABLE (With PostgreSQL + pgvector)
@@ -149,6 +162,7 @@ export const aiUsageLogs = pgTable(
   },
   (table) => [
     index("ai_usage_logs_user_created_idx").on(table.userId, table.createdAt),
+    index("ai_usage_logs_op_created_idx").on(table.operation, table.createdAt),
   ]
 );
 

@@ -50,6 +50,13 @@
       "when": 1790240000000,
       "tag": "0006_enhance_document_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790250000000,
+      "tag": "0007_add_admin_indexes",
+      "breakpoints": true
     }
   ]
 }

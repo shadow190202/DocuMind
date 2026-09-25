@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { documents, documentChunks, documentSummaries, documentComparisons } from "@/db/schema";
-import { eq, and, or } from "drizzle-orm";
-import { getFile, saveExtractedData } from "@/lib/storage";
-import { extractTextFromDocument } from "@/lib/parsers";
-import { chunkDocument } from "@/lib/ai/chunker";
+import { documents } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { executeDocumentProcessing } from "@/lib/document-processor";
 import {
-  generateBatchEmbeddings,
   EMBEDDING_MODEL,
   EXPECTED_DIMENSIONS,
 } from "@/lib/ai/gemini";
@@ -59,183 +56,12 @@ export async function POST(req, { params }) {
 
     const doc = access.document;
 
-    // 2. Mark document status as 'processing'
-    await db
-      .update(documents)
-      .set({
-        processingStatus: "processing",
-        errorMessage: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(documents.id, id));
+    // 2. Execute authoritative processing pipeline under owner identity
+    const result = await executeDocumentProcessing({ document: doc });
 
-    // 3. Load file binary from secure storage
-    let fileBuffer;
-    try {
-      fileBuffer = await getFile(doc.storageUrl);
-    } catch (storageErr) {
-      const errMsg = `Storage retrieval failed: ${storageErr.message}`;
-      await db
-        .update(documents)
-        .set({
-          processingStatus: "failed",
-          errorMessage: errMsg,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, id));
-
-      return NextResponse.json({ error: errMsg }, { status: 500 });
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: result.status || 500 });
     }
-
-    // 4. Extract text using dedicated parser
-    let extractedResult;
-    try {
-      extractedResult = await extractTextFromDocument(fileBuffer, doc.fileType);
-    } catch (extractErr) {
-      console.error(`Text extraction failed for doc ${id}:`, extractErr);
-      const errMsg = `Text extraction error: ${extractErr.message}`;
-
-      await db
-        .update(documents)
-        .set({
-          processingStatus: "failed",
-          errorMessage: errMsg,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, id));
-
-      return NextResponse.json({ error: errMsg }, { status: 422 });
-    }
-
-    // Validate that extracted text is not empty
-    if (!extractedResult.text || extractedResult.text.trim().length === 0) {
-      const errMsg = "Extracted document text is empty. Cannot generate chunks or embeddings.";
-      await db
-        .update(documents)
-        .set({
-          processingStatus: "failed",
-          errorMessage: errMsg,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, id));
-
-      return NextResponse.json({ error: errMsg }, { status: 422 });
-    }
-
-    // 5. Save structured extracted data to isolated storage using the document owner's user ID
-    const extractedPayload = {
-      documentId: doc.id,
-      userId: doc.userId,
-      filename: doc.filename,
-      fileType: doc.fileType,
-      text: extractedResult.text,
-      pageCount: extractedResult.pageCount,
-      pages: extractedResult.pages,
-      metadata: extractedResult.metadata,
-    };
-
-    await saveExtractedData(extractedPayload, doc.id, doc.userId);
-
-    // 6. Divide text into semantic chunks
-    const chunks = chunkDocument(extractedResult);
-    if (!chunks || chunks.length === 0) {
-      const errMsg = "Chunking failed: no valid text segments could be created.";
-      await db
-        .update(documents)
-        .set({
-          processingStatus: "failed",
-          errorMessage: errMsg,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, id));
-
-      return NextResponse.json({ error: errMsg }, { status: 422 });
-    }
-
-    // 7. Generate vector embeddings via official Gemini API
-    // Must generate ALL embeddings and validate 768 dimensions BEFORE starting DB transaction
-    let embeddings = [];
-    try {
-      const chunkTexts = chunks.map((c) => c.content);
-      embeddings = await generateBatchEmbeddings(chunkTexts);
-
-      if (embeddings.length !== chunks.length) {
-        throw new Error(
-          `Embedding count mismatch: generated ${embeddings.length} embeddings for ${chunks.length} chunks.`
-        );
-      }
-
-      // Assert every embedding has length === 768
-      for (let i = 0; i < embeddings.length; i++) {
-        const emb = embeddings[i];
-        if (!Array.isArray(emb) || emb.length !== EXPECTED_DIMENSIONS) {
-          throw new Error(
-            `Chunk ${i} embedding failed dimension validation: expected ${EXPECTED_DIMENSIONS}, received ${emb?.length}.`
-          );
-        }
-      }
-    } catch (embeddingErr) {
-      console.error(`Embedding generation failed for doc ${id}:`, embeddingErr);
-      const errMsg = `Embedding generation error: ${embeddingErr.message}`;
-
-      // Mark document as failed, but PRESERVE existing database chunks
-      await db
-        .update(documents)
-        .set({
-          processingStatus: "failed",
-          errorMessage: errMsg,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, id));
-
-      return NextResponse.json({ error: errMsg }, { status: 502 });
-    }
-
-    // 8. Atomic Database Transaction: Delete old chunks & insert new chunks + embeddings
-    await db.transaction(async (tx) => {
-      // Delete existing chunks for this document
-      await tx
-        .delete(documentChunks)
-        .where(eq(documentChunks.documentId, id));
-
-      // Transactional Cache Invalidation: invalidate comparisons where this document was source or target
-      await tx
-        .delete(documentComparisons)
-        .where(
-          or(
-            eq(documentComparisons.sourceDocumentId, id),
-            eq(documentComparisons.targetDocumentId, id)
-          )
-        );
-
-      // Invalidate existing cached summaries for this document
-      await tx
-        .delete(documentSummaries)
-        .where(eq(documentSummaries.documentId, id));
-
-      // Prepare records for batch insertion
-      const chunkRecords = chunks.map((chunk, index) => ({
-        documentId: doc.id,
-        chunkIndex: chunk.chunkIndex,
-        content: chunk.content,
-        pageNumber: chunk.pageNumber, // genuine number for PDF, null for DOCX/TXT/CSV
-        embedding: embeddings[index], // validated 768 float array
-        createdAt: new Date(),
-      }));
-
-      // Insert new chunks
-      await tx.insert(documentChunks).values(chunkRecords);
-
-      // Update document status to completed
-      await tx
-        .update(documents)
-        .set({
-          processingStatus: "completed",
-          errorMessage: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, id));
-    });
 
     // 9. Fetch and return updated document record
     const [updatedDoc] = await db
