@@ -130,7 +130,7 @@ export async function POST(req, { params }) {
       );
     }
 
-    // 5. Generate summary using Gemini 2.5 Flash
+    // 5. Generate summary using Gemini 3.8 Flash
     let generatedResult;
     try {
       generatedResult = await generateDocumentSummary({

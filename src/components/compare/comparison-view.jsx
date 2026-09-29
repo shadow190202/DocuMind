@@ -539,7 +539,7 @@ export function ComparisonView() {
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
                 Comparing document sections, aligning semantic vectors, and
                 categorizing additions, omissions, altered terms, and numerical
-                revisions with Gemini 2.5 Flash.
+                revisions with Gemini 3.8 Flash.
               </p>
             </div>
           </CardContent>
@@ -622,7 +622,7 @@ export function ComparisonView() {
               </Badge>
 
               <Badge variant="outline" className="font-normal text-[11px]">
-                {comparison.model || "gemini-2.5-flash"}
+                {comparison.model || "gemini-3.8-flash"}
               </Badge>
 
               {comparison.totalTokens !== null &&
@@ -798,7 +798,7 @@ export function ComparisonView() {
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               {sourceId && targetId && sourceId !== targetId
-                ? "Click 'Compare Documents' above to run grounded comparative analysis using Gemini 2.5 Flash."
+                ? "Click 'Compare Documents' above to run grounded comparative analysis using Gemini 3.8 Flash."
                 : "Choose a Base and Revised document to uncover additions, deletions, term alterations, and numerical differences."}
             </p>
           </CardContent>
@@ -818,7 +818,7 @@ export function ComparisonView() {
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-2">
               <span>
-                This will invoke Gemini 2.5 Flash again to perform fresh
+                This will invoke Gemini 3.8 Flash again to perform fresh
                 comparative analysis between{" "}
                 <strong>{sourceDoc?.filename || "Base"}</strong> and{" "}
                 <strong>{targetDoc?.filename || "Revised"}</strong>.

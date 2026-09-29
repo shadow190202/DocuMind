@@ -288,7 +288,7 @@ async function runPhase9Verification() {
   // ----------------------------------------------------
   console.log("--- 4. Testing Gemini Configuration & Free-Tier Resilience ---");
 
-  assert(CHAT_MODEL === "gemini-2.5-flash", "Uses approved free-tier model 'gemini-2.5-flash'");
+  assert(CHAT_MODEL === "gemini-3.8-flash", "Uses approved free-tier model 'gemini-3.8-flash'");
 
   // Test empty context fallback
   const emptyContextAnswer = await generateGroundedAnswer({
@@ -300,21 +300,21 @@ async function runPhase9Verification() {
     "Returns grounded fallback immediately when context is empty"
   );
 
-  // If GEMINI_API_KEY is present in environment, test live Gemini generation
-  if (process.env.GEMINI_API_KEY) {
-    console.log("GEMINI_API_KEY found! Testing live grounded answer generation with gemini-2.5-flash...");
+  // If GEMINI_API_KEY is present in environment and mock AI is not enabled, test live Gemini generation
+  if (process.env.GEMINI_API_KEY && process.env.DOCUMIND_MOCK_AI !== "true") {
+    console.log("GEMINI_API_KEY found! Testing live grounded answer generation with gemini-3.8-flash...");
     const liveAnswer = await generateGroundedAnswer({
       question: "What is the net profit?",
       contextText: "--- [SOURCE 1] Financials.pdf (Page 4) ---\nNet profit for fiscal year 2024 was $12.4 million.",
     });
     console.log(`Live answer received: "${liveAnswer.slice(0, 100)}..."`);
-    assert(liveAnswer.length > 0, "Received non-empty response from Gemini 2.5 Flash");
+    assert(liveAnswer.length > 0, "Received non-empty response from Gemini 3.8 Flash");
     assert(
       liveAnswer.toLowerCase().includes("12.4") || liveAnswer.includes("[SOURCE 1]"),
       "Live answer contains factual grounding or source citation from context"
     );
   } else {
-    console.log("Notice: GEMINI_API_KEY not configured in environment; skipped live API call.");
+    console.log("Notice: GEMINI_API_KEY not configured or DOCUMIND_MOCK_AI enabled; skipped live API call.");
   }
 
   console.log("Gemini configuration & rate-limit safety tests passed!\n");

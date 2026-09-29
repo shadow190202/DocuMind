@@ -76,7 +76,7 @@ export default function AdminUsagePage() {
                 Observed AI Consumption
               </h2>
               <p className="text-xs text-slate-500">
-                Tracking Gemini 2.5 Flash chat, summarization, and comparison requests
+                Tracking Gemini 3.8 Flash chat, summarization, and comparison requests
               </p>
             </div>
 

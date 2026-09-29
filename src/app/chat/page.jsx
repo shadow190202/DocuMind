@@ -325,7 +325,7 @@ function ChatContent() {
                 <p className="text-[11px] text-slate-500 truncate">
                   {activeConv?.documentName
                     ? `Scoped to ${activeConv.documentName}`
-                    : "Grounded Q&A powered by Gemini 2.5 Flash & pgvector retrieval"}
+                    : "Grounded Q&A powered by Gemini 3.8 Flash & pgvector retrieval"}
                 </p>
               </div>
             </div>
@@ -599,7 +599,7 @@ function ChatContent() {
                   </div>
                 </div>
                 <div className="font-mono text-[10px]">
-                  Free Tier: gemini-2.5-flash • pgvector &lt;=&gt; cosine
+                  Free Tier: gemini-3.8-flash • pgvector &lt;=&gt; cosine
                 </div>
               </div>
             </div>

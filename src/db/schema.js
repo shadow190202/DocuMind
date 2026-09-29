@@ -153,7 +153,7 @@ export const aiUsageLogs = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    model: text("model").notNull(), // 'gemini-2.5-flash'
+    model: text("model").notNull(), // 'gemini-3.8-flash'
     operation: text("operation").notNull(), // 'chat'
     promptTokens: integer("prompt_tokens"), // nullable if usageMetadata unavailable
     completionTokens: integer("completion_tokens"), // nullable if usageMetadata unavailable
@@ -182,7 +182,7 @@ export const documentSummaries = pgTable(
     summaryType: text("summary_type").notNull(), // 'executive' | 'detailed' | 'key_points' | 'dates' | 'numbers' | 'action_items' | 'comprehensive'
     content: text("content").notNull(), // Authoritative generated Markdown content
     structuredData: jsonb("structured_data"), // Optional, defaults to null in Phase 11
-    model: text("model").notNull(), // 'gemini-2.5-flash'
+    model: text("model").notNull(), // 'gemini-3.8-flash'
     promptTokens: integer("prompt_tokens"), // Nullable if usageMetadata unavailable
     completionTokens: integer("completion_tokens"),
     totalTokens: integer("total_tokens"),
@@ -218,7 +218,7 @@ export const documentComparisons = pgTable(
       .references(() => documents.id, { onDelete: "cascade" }),
     content: text("content").notNull(), // Authoritative generated Markdown comparison report
     structuredData: jsonb("structured_data"), // Nullable and NULL for Phase 12
-    model: text("model").notNull(), // 'gemini-2.5-flash'
+    model: text("model").notNull(), // 'gemini-3.8-flash'
     promptTokens: integer("prompt_tokens"), // Nullable if usageMetadata unavailable
     completionTokens: integer("completion_tokens"),
     totalTokens: integer("total_tokens"),

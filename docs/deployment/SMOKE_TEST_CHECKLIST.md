@@ -97,10 +97,10 @@ Execute these verification steps after launching the production container:
   - [ ] Search query generates embedding and performs cosine distance search (`<=>`).
   - [ ] Relevant chunks are returned with high similarity scores.
 
-### Check 9: Grounded RAG Chat (`gemini-2.5-flash`)
+### Check 9: Grounded RAG Chat (`gemini-3.8-flash`)
 * **Action:** Open the document chat interface and ask a question answered by the document content.
 * **Verification:**
-  - [ ] Chat query returns a structured JSON answer from `gemini-2.5-flash`.
+  - [ ] Chat query returns a structured JSON answer from `gemini-3.8-flash`.
   - [ ] Response includes verified citation snippets and page number references.
   - [ ] Conversation and messages are persisted in PostgreSQL.
 

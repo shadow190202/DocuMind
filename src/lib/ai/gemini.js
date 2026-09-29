@@ -15,7 +15,7 @@ import { GoogleGenAI } from "@google/genai";
  */
 
 export const EMBEDDING_MODEL = "gemini-embedding-001";
-export const CHAT_MODEL = "gemini-2.5-flash";
+export const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-3.8-flash";
 export const EXPECTED_DIMENSIONS = 768;
 export const DEFAULT_EMBEDDING_BATCH_SIZE = parseInt(
   process.env.EMBEDDING_BATCH_SIZE || "20",
@@ -210,7 +210,7 @@ export class GroundedAnswerResponse extends String {
 }
 
 /**
- * Generates a grounded answer from document context using Gemini 2.5 Flash.
+ * Generates a grounded answer from document context using Gemini 3.8 Flash.
  *
  * Implements free-tier rate limit friendliness:
  * - At most 1 single backoff retry (2s) on 429 / RESOURCE_EXHAUSTED.

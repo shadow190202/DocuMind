@@ -971,7 +971,7 @@ export default function DocumentDetailsPage() {
                             Grounded Document Intelligence
                           </span>
                           <Badge variant="outline" className="text-[10px] font-mono">
-                            gemini-2.5-flash
+                            gemini-3.8-flash
                           </Badge>
                         </div>
 
@@ -1161,7 +1161,7 @@ export default function DocumentDetailsPage() {
                           <div className="flex items-start gap-2">
                             <div className="rounded-2xl p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 rounded-bl-xs shadow-xs flex items-center gap-2">
                               <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                              <span>Synthesizing grounded answer with Gemini 2.5 Flash...</span>
+                              <span>Synthesizing grounded answer with Gemini 3.8 Flash...</span>
                             </div>
                           </div>
                         )}

@@ -49,7 +49,7 @@ Design, build, and deploy an enterprise-grade document intelligence platform tha
 ### Decision 4: Gemini Free-Tier AI & Quota Architecture
 * **The Dilemma:** High-volume AI operations can rapidly exhaust provider-level free-tier quotas (HTTP 429 `RESOURCE_EXHAUSTED`).
 * **The Solution:**
-  1. *Model Selection:* Exclusively uses `gemini-embedding-001` (768 dimensions) for vectorization and `gemini-2.5-flash` for grounded chat, summarization, and comparisons.
+  1. *Model Selection:* Exclusively uses `gemini-embedding-001` (768 dimensions) for vectorization and `gemini-3.8-flash` for grounded chat, summarization, and comparisons.
   2. *Result Caching:* Document summaries and comparisons are cached in PostgreSQL (`document_summaries` and `document_comparisons`), completely eliminating repeated LLM calls for identical requests.
   3. *Application Rate Limiting:* An in-memory sliding window limits AI endpoints to 10 req/min/IP.
   4. *Exponential Backoff:* Transient provider 429 events are handled via automated retries with jitter (1s, 2s, 4s).

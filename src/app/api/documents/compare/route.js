@@ -153,7 +153,7 @@ export async function POST(req) {
       );
     }
 
-    // 5. Generate grounded comparison using Gemini 2.5 Flash
+    // 5. Generate grounded comparison using Gemini 3.8 Flash
     // Safe Regeneration: If this fails, catch block exits and existing cached comparison remains intact!
     let generatedResult;
     try {

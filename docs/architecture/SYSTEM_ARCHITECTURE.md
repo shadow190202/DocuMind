@@ -12,7 +12,7 @@ DocuMind is built upon six foundational architectural decisions:
 2. **PostgreSQL + pgvector as the Unified Source of Truth:** Rather than maintaining a separate vector database (e.g., Pinecone, Weaviate) alongside a relational database, DocuMind leverages PostgreSQL 15/16 with the `pgvector` extension. Document metadata, user permissions, conversation history, and 768-dimensional chunk embeddings reside in a single relational store, guaranteeing atomic transactions (`db.transaction`) and foreign-key cascade deletes (`ON DELETE CASCADE`).
 3. **Google Gemini Free-Tier Constraint:** All AI operations rely on official Google Gemini free-tier endpoints (`@google/genai`):
    * **Vector Embeddings:** `gemini-embedding-001` with `outputDimensionality: 768`.
-   * **Grounded Chat, Summaries & Comparisons:** `gemini-2.5-flash`.
+   * **Grounded Chat, Summaries & Comparisons:** `gemini-3.8-flash`.
    * *Trade-off:* Free-tier quotas are governed by Google policies. To manage burst traffic locally, DocuMind enforces an application-level sliding-window rate limiter (10 req/min/IP on AI routes) and automatic exponential backoff retries (1s, 2s, 4s) on HTTP 429 events.
 4. **Persistent Local Filesystem Storage:** Document binaries and extracted text JSON persist on the local filesystem under `/app/storage/documents` and `/app/storage/extracted`. In production, this directory is mounted to a persistent host disk via Docker volume (`-v /var/data/documind/storage:/app/storage`), eliminating external cloud object storage costs.
 5. **Database-Authoritative Admin Authorization:** While Clerk authentication establishes caller identity (`userId`), PostgreSQL `users.role === 'admin'` is the sole authoritative administrative authority. Every admin endpoint (`/api/admin/*`) executes a live database query (`verifyAdminAccess`), eliminating vulnerability to stale JWT session claims.
@@ -82,7 +82,7 @@ sequenceDiagram
     participant GeminiEmbed as gemini-embedding-001
     participant PGVector as PostgreSQL (pgvector)
     participant Context as RAG Context Assembler
-    participant GeminiChat as gemini-2.5-flash
+    participant GeminiChat as gemini-3.8-flash
     participant DB as PostgreSQL Tables
 
     User->>Route: POST /api/chat { question, documentId, conversationId }
@@ -124,7 +124,7 @@ sequenceDiagram
    * Assembles the retrieved passages into a structured prompt context while tracking estimated token budgets (default: 3,000 tokens).
    * Truncates gracefully if passages exceed budget, preserving the highest-similarity chunks.
 6. **Grounded Generation (`generateGroundedAnswer`):**
-   * Directs `gemini-2.5-flash` with strict system instructions to rely exclusively on the provided context.
+   * Directs `gemini-3.8-flash` with strict system instructions to rely exclusively on the provided context.
    * If retrieved context is insufficient, returns a standardized fallback message rather than hallucinating an answer.
 7. **Atomic Persistence & Telemetry Logging:**
    * Within a single database transaction, the user question and assistant answer are saved to `messages`, updating `conversations.updatedAt`.
@@ -141,7 +141,7 @@ sequenceDiagram
 
 ### 4.2 Document Comparison Pipeline (`/api/documents/compare`)
 * **Dual-Document Authorization:** Requires caller to have verified read or owner access to *both* the source and target documents (`verifyDualDocumentAccess`). If either document is inaccessible, returns HTTP 404.
-* **Structured Analysis:** Uses `gemini-2.5-flash` to extract structured comparisons: similarities, key differences, and actionable recommendations.
+* **Structured Analysis:** Uses `gemini-3.8-flash` to extract structured comparisons: similarities, key differences, and actionable recommendations.
 * **Database Caching:** Cached in `document_comparisons` indexed on `(source_document_id, target_document_id)`.
 
 ---

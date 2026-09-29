@@ -298,7 +298,7 @@ export function SummaryTab({ documentId, document }) {
               Synthesizing {activeDimension.title}
             </h3>
             <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-              Analyzing document text with Gemini 2.5 Flash. Extracting grounded facts, figures, and key takeaways strictly from source content...
+              Analyzing document text with Gemini 3.8 Flash. Extracting grounded facts, figures, and key takeaways strictly from source content...
             </p>
           </CardContent>
         </Card>
@@ -408,7 +408,7 @@ export function SummaryTab({ documentId, document }) {
               </Badge>
 
               <Badge variant="outline" className="font-normal text-[11px]">
-                {activeSummary.model || "gemini-2.5-flash"}
+                {activeSummary.model || "gemini-3.8-flash"}
               </Badge>
 
               {activeSummary.totalTokens !== null && activeSummary.totalTokens !== undefined ? (
@@ -548,7 +548,7 @@ export function SummaryTab({ documentId, document }) {
               Regenerate {activeDimension.title}?
             </DialogTitle>
             <DialogDescription className="pt-2 text-sm text-slate-600 dark:text-slate-400">
-              Regenerating will submit a new synthesis request to Gemini 2.5 Flash and consume free-tier quota.
+              Regenerating will submit a new synthesis request to Gemini 3.8 Flash and consume free-tier quota.
               Your existing summary will only be replaced if the new generation succeeds.
             </DialogDescription>
           </DialogHeader>

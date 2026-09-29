@@ -276,7 +276,7 @@ async function runPhase14Verification() {
         userId: testOwnerDave,
         summaryType: "executive",
         content: "Cached executive summary for QuarterlyReport.",
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
       })
       .returning();
     summaryAId = createdSummary.id;
@@ -301,7 +301,7 @@ async function runPhase14Verification() {
         sourceDocumentId: docAId,
         targetDocumentId: docB.id,
         content: "Cached comparison between QuarterlyReport and AnnualReview.",
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
       })
       .returning();
     compAId = createdComp.id;
@@ -351,7 +351,7 @@ async function runPhase14Verification() {
       .insert(aiUsageLogs)
       .values({
         userId: testOwnerDave,
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         operation: "chat",
         promptTokens: 1200,
         completionTokens: 350,

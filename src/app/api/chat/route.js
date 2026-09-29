@@ -19,7 +19,7 @@ const INSUFFICIENT_CONTEXT_MESSAGE =
 
 /**
  * POST /api/chat
- * Grounded AI Question Answering with Gemini 2.5 Flash & pgvector retrieval.
+ * Grounded AI Question Answering with Gemini 3.8 Flash & pgvector retrieval.
  */
 export async function POST(req) {
   try {
@@ -256,7 +256,7 @@ export async function POST(req) {
       }
     }
 
-    // 6. Generate grounded answer using Gemini 2.5 Flash
+    // 6. Generate grounded answer using Gemini 3.8 Flash
     let aiResponse;
     try {
       aiResponse = await generateGroundedAnswer({

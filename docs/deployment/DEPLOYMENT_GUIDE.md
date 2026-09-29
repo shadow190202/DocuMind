@@ -40,7 +40,7 @@ DocuMind's production deployment runs as a containerized Next.js 14 service on a
                                        ┌──────────────────────────────┐
                                        │ Google Gemini Free-Tier API  │
                                        │ - gemini-embedding-001 (768) │
-                                       │ - gemini-2.5-flash (chat)    │
+                                       │ - gemini-3.8-flash (chat)    │
                                        └──────────────────────────────┘
 ```
 
@@ -259,7 +259,7 @@ Connecting to database to verify user "admin@yourdomain.com"...
 
 ### 9.1 Active Models
 * **Embeddings:** `gemini-embedding-001` with `outputDimensionality: 768`.
-* **Chat, Summaries & Comparisons:** `gemini-2.5-flash`.
+* **Chat, Summaries & Comparisons:** `gemini-3.8-flash`.
 
 ### 9.2 Rate Limiting vs Provider Quotas
 * **Application Throttling:** DocuMind limits client requests to 10 req/min per IP on AI endpoints (`/api/chat`, `/api/summary`, `/api/compare`).

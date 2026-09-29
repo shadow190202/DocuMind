@@ -409,7 +409,7 @@ async function runPhase13Verification() {
         userId: aliceId,
         summaryType: "executive",
         content: "Executive Summary: This agreement details bilateral terms.",
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
       })
       .returning();
     assert(aliceSummary !== null, "Cached summary created for Document A");
@@ -473,7 +473,7 @@ async function runPhase13Verification() {
         sourceDocumentId: docAId,
         targetDocumentId: docDId,
         content: "Comparison between Master Agreement and Amendment.",
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
       })
       .returning();
     assert(compRecord !== null, "Comparison cache created for pair (Doc A, Doc D)");

@@ -87,7 +87,7 @@ erDiagram
     ai_usage_logs {
         uuid id PK "gen_random_uuid()"
         text user_id FK "REFERENCES users(id) ON DELETE CASCADE"
-        text model "e.g. gemini-2.5-flash"
+        text model "e.g. gemini-3.8-flash"
         text operation "'chat' | 'summarize' | 'compare' | 'embedding'"
         integer prompt_tokens
         integer completion_tokens
@@ -102,7 +102,7 @@ erDiagram
         text summary_type "'executive' | 'bullet' | 'key_takeaways'"
         text content "Generated summary text"
         jsonb structured_data "Extracted JSON key points"
-        text model "e.g. gemini-2.5-flash"
+        text model "e.g. gemini-3.8-flash"
         integer prompt_tokens
         integer completion_tokens
         integer total_tokens
@@ -117,7 +117,7 @@ erDiagram
         uuid target_document_id FK "REFERENCES documents(id) ON DELETE CASCADE"
         text content "Comparative analysis text"
         jsonb structured_data "Similarities and differences JSON"
-        text model "e.g. gemini-2.5-flash"
+        text model "e.g. gemini-3.8-flash"
         integer prompt_tokens
         integer completion_tokens
         integer total_tokens
@@ -193,7 +193,7 @@ Enforces collaborator sharing and granular access control.
 Maintains platform-wide AI token and model consumption telemetry.
 * `id` (`uuid`, PRIMARY KEY, DEFAULT `gen_random_uuid()`).
 * `user_id` (`text`, NOT NULL): Foreign key referencing `users(id)` ON DELETE CASCADE.
-* `model` (`text`, NOT NULL): Model name (e.g. `gemini-2.5-flash`, `gemini-embedding-001`).
+* `model` (`text`, NOT NULL): Model name (e.g. `gemini-3.8-flash`, `gemini-embedding-001`).
 * `operation` (`text`, NOT NULL): AI operation type (`'chat'`, `'summarize'`, `'compare'`, `'embedding'`).
 * `prompt_tokens` (`integer`, NULLABLE): Input token count.
 * `completion_tokens` (`integer`, NULLABLE): Output token count.
@@ -208,7 +208,7 @@ Caches generated document summaries to eliminate redundant AI calls.
 * `summary_type` (`text`, NOT NULL): Category (`'executive'`, `'bullet'`, `'key_takeaways'`).
 * `content` (`text`, NOT NULL): Summary text.
 * `structured_data` (`jsonb`, NULLABLE): Extracted structured key points.
-* `model` (`text`, NOT NULL): Model used (`gemini-2.5-flash`).
+* `model` (`text`, NOT NULL): Model used (`gemini-3.8-flash`).
 * `prompt_tokens`, `completion_tokens`, `total_tokens` (`integer`, NULLABLE): Token usage.
 * `created_at`, `updated_at` (`timestamp`, NOT NULL, DEFAULT `now()`).
 
@@ -220,7 +220,7 @@ Caches comparative analysis between two authorized documents.
 * `target_document_id` (`uuid`, NOT NULL): Foreign key referencing `documents(id)` ON DELETE CASCADE.
 * `content` (`text`, NOT NULL): Comparative analysis markdown.
 * `structured_data` (`jsonb`, NULLABLE): Extracted structured similarities and differences.
-* `model` (`text`, NOT NULL): Model used (`gemini-2.5-flash`).
+* `model` (`text`, NOT NULL): Model used (`gemini-3.8-flash`).
 * `prompt_tokens`, `completion_tokens`, `total_tokens` (`integer`, NULLABLE): Token usage.
 * `created_at`, `updated_at` (`timestamp`, NOT NULL, DEFAULT `now()`).
 
