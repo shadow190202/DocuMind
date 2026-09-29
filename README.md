@@ -19,27 +19,25 @@ Built with a strict **100% JavaScript** codebase, DocuMind operates entirely on 
 
 ```mermaid
 flowchart TD
-    Client["Browser Client / Next.js 14 UI"] -->|HTTPS / Port 443| Proxy["Reverse Proxy (Nginx / Cloudflare)"]
-    Proxy -->|HTTP / Port 3000| App["DocuMind Next.js 14 App Router<br/>(Docker: node:20-bookworm-slim)"]
-    
-    subgraph Auth & Gatekeeping ["Authentication & Security Gates"]
-        App -->|Verify Session| Clerk["Clerk Authentication Provider"]
-        App -->|Authorize Admin / users.role| PGLock["PostgreSQL Admin Gate"]
-        App -->|Sliding-Window Throttling| Limiter["In-Memory Rate Limiter (10 req/min/IP)"]
+    Client["Browser Client / Next.js 14 UI"] -->|"HTTPS Port 443"| Proxy["Reverse Proxy: Nginx or Cloudflare"]
+    Proxy -->|"HTTP Port 3000"| App["DocuMind Next.js 14 App Router<br/>Docker: node:20-bookworm-slim"]
+
+    subgraph AuthGate["Authentication and Security Gates"]
+        App -->|"Verify Session"| Clerk["Clerk Authentication Provider"]
+        App -->|"Authorize Admin / users.role"| PGLock["PostgreSQL Admin Gate"]
+        App -->|"Sliding Window Throttling"| Limiter["In-Memory Rate Limiter<br/>10 requests/min/IP"]
     end
 
-    subgraph Data & Storage ["Storage & Database Subsystem"]
-        App -->|File & JSON Storage| LocalDisk["Host Persistent Storage (/app/storage)<br/>├── documents/ (Raw Files)<br/>└── extracted/ (Parsed JSON)"]
-        App -->|Drizzle ORM / SQL| PG["PostgreSQL 15/16 + pgvector<br/>(prepare: false Pooler Resilience)<br/>├── users & documents<br/>├── document_chunks (vector 768)<br/>├── conversations & messages<br/>├── ai_usage_logs (telemetry)<br/>└── summaries & comparisons"]
+    subgraph DataStorage["Storage and Database Subsystem"]
+        App -->|"File and JSON Storage"| LocalDisk["Persistent Storage<br/>/app/storage<br/>documents: Raw Files<br/>extracted: Parsed JSON"]
+        App -->|"Drizzle ORM / SQL"| PG["PostgreSQL 18.6 with pgvector<br/>Users and Documents<br/>Document Chunks: 768d Vector<br/>Conversations and Messages<br/>AI Usage Logs<br/>Summaries and Comparisons"]
     end
 
-    subgraph AI Processing ["Google Gemini Free-Tier Services"]
-        App -->|Embeddings (768d)| EmbedAPI["gemini-embedding-001<br/>(outputDimensionality: 768)"]
-        App -->|Grounded Q&A & Analysis| ChatAPI["gemini-2.5-flash<br/>(RAG Chat, Summaries, Compare)"]
+    subgraph AIProcessing["Google Gemini Services"]
+        App -->|"768-dimensional Embeddings"| EmbedAPI["gemini-embedding-001<br/>Output Dimension: 768"]
+        App -->|"Grounded Q&A and Analysis"| ChatAPI["gemini-2.5-flash<br/>RAG Chat, Summaries, Comparison"]
     end
 ```
-
----
 
 ## Core Features
 
