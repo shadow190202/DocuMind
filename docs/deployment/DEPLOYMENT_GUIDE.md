@@ -104,7 +104,7 @@ DATABASE_URL=postgresql://user:password@ep-sample-pooler.region.aws.neon.tech/do
 
 # Clerk Production Credentials
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxxxxxxxxxxxxxxxxxxxxxxx
-CLERK_SECRET_KEY=sk_live_REDACTED
+CLERK_SECRET_KEY=your_clerk_secret_key
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
