@@ -154,7 +154,7 @@ export function ConversationCard({ conversation, onRename, onDelete }) {
           </span>
         </div>
 
-        <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs" asChild>
+        <Button size="sm" variant="ghost" className="gap-1.5 text-xs font-medium" asChild>
           <Link href={`/chat?id=${conversation.id}`}>
             Resume
             <ArrowRight className="w-3.5 h-3.5" />

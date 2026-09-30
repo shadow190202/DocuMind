@@ -245,17 +245,17 @@ export default function DocumentsPage() {
               {docs.length} {docs.length === 1 ? "File" : "Files"}
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               onClick={() => setSearchModalOpen(true)}
-              className="gap-1.5 shadow-sm text-blue-600 dark:text-blue-400"
+              className="gap-2 shadow-sm text-blue-600 dark:text-blue-400"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-4 h-4" />
               Vault Semantic Search
             </Button>
-            <Button size="sm" asChild className="gap-1.5 shadow-sm">
+            <Button size="md" asChild className="gap-2 shadow-sm">
               <Link href="/documents/upload">
                 <Upload className="w-4 h-4" />
                 Upload Document
@@ -350,7 +350,7 @@ export default function DocumentsPage() {
                     </p>
                   </div>
                   {!searchQuery && (
-                    <Button asChild size="sm" className="gap-1.5">
+                    <Button asChild size="md" className="gap-2 shadow-sm">
                       <Link href="/documents/upload">
                         <Upload className="w-4 h-4" />
                         Upload Document

@@ -366,7 +366,7 @@ function ChatContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowExportMenu(!showExportMenu)}
-                    className="h-8 gap-1.5 text-xs"
+                    className="gap-1.5 text-xs shadow-xs"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Export</span>
@@ -403,7 +403,7 @@ function ChatContent() {
                 <select
                   value={selectedDocId}
                   onChange={(e) => setSelectedDocId(e.target.value)}
-                  className="h-8 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 max-w-[180px] truncate"
+                  className="h-9 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 max-w-[180px] truncate shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Entire Document Vault</option>
                   {documentsList.map((doc) => (
@@ -610,7 +610,7 @@ function ChatContent() {
                       variant="outline"
                       onClick={() => handleAsk(lastPrompt)}
                       disabled={loading}
-                      className={`shrink-0 text-xs gap-1.5 h-8 font-medium ${
+                      className={`shrink-0 text-xs gap-1.5 font-medium ${
                         isAmber
                           ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
                           : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"

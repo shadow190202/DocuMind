@@ -36,9 +36,9 @@ export default function ComparePage() {
           </div>
           <Badge
             variant="secondary"
-            className="bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-[11px]"
+            className="bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-[11px] font-medium"
           >
-            Phase 12
+            Comparative AI
           </Badge>
         </header>
 

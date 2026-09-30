@@ -571,7 +571,7 @@ export function ComparisonView() {
                   size="sm"
                   variant="outline"
                   onClick={handleCopy}
-                  className="h-8 text-xs gap-1.5"
+                  className="text-xs gap-1.5 shadow-xs"
                   title="Copy comparison to clipboard"
                 >
                   {copied ? (
@@ -591,7 +591,7 @@ export function ComparisonView() {
                   size="sm"
                   variant="outline"
                   onClick={handleDownload}
-                  className="h-8 text-xs gap-1.5"
+                  className="text-xs gap-1.5 shadow-xs"
                   title="Download as Markdown"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -602,7 +602,7 @@ export function ComparisonView() {
                   size="sm"
                   variant="outline"
                   onClick={() => setShowRegenerateDialog(true)}
-                  className="h-8 text-xs gap-1.5 hover:text-purple-600 dark:hover:text-purple-400"
+                  className="text-xs gap-1.5 hover:text-purple-600 dark:hover:text-purple-400 shadow-xs"
                   title="Regenerate comparison with Gemini"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />

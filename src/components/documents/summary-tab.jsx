@@ -317,7 +317,7 @@ export function SummaryTab({ documentId, document }) {
               variant="outline"
               onClick={() => handleGenerate(false)}
               disabled={generating}
-              className={`shrink-0 text-xs gap-1.5 h-8 font-medium ${
+              className={`shrink-0 text-xs gap-1.5 font-medium ${
                 isAmber
                   ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
                   : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"
@@ -416,7 +416,7 @@ export function SummaryTab({ documentId, document }) {
                   size="sm"
                   variant="outline"
                   onClick={handleCopy}
-                  className="h-8 text-xs gap-1.5"
+                  className="text-xs gap-1.5 shadow-xs"
                   title="Copy markdown text"
                 >
                   {copied ? (
@@ -436,7 +436,7 @@ export function SummaryTab({ documentId, document }) {
                   size="sm"
                   variant="outline"
                   onClick={handleDownload}
-                  className="h-8 text-xs gap-1.5"
+                  className="text-xs gap-1.5 shadow-xs"
                   title="Download as Markdown"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -447,7 +447,7 @@ export function SummaryTab({ documentId, document }) {
                   size="sm"
                   variant="outline"
                   onClick={() => setShowRegenerateDialog(true)}
-                  className="h-8 text-xs gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
+                  className="text-xs gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs"
                   title="Regenerate summary with Gemini"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />

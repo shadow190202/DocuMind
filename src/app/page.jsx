@@ -42,9 +42,9 @@ export default function HomePage() {
   const [selectedFormat, setSelectedFormat] = useState("PDF");
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="min-h-screen flex flex-col bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-x-hidden">
       {/* Navbar */}
-      <Navbar onOpenDemoModal={() => setDemoDialogOpen(true)} />
+      <Navbar />
 
       <main className="flex-1">
         {/* ============================================================ */}
@@ -52,7 +52,7 @@ export default function HomePage() {
         {/* ============================================================ */}
         <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-32">
           {/* Subtle background glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-3xl -z-10 rounded-full pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] max-w-full bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-3xl -z-10 rounded-full pointer-events-none" />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
             {/* Version Badge */}
@@ -89,7 +89,7 @@ export default function HomePage() {
                 onClick={() => setDemoDialogOpen(true)}
               >
                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                Live Component Preview
+                Interactive Product Tour
               </Button>
             </div>
 
@@ -145,7 +145,7 @@ export default function HomePage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold truncate">FY2026_Q3_Financial_Review.pdf</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">38 Pages • 248 Chunks • 1536-dim</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">38 Pages • 248 Chunks • 768-dim (pgvector)</p>
                       </div>
                     </div>
 
@@ -432,10 +432,13 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full sm:w-auto"
-                onClick={() => setDemoDialogOpen(true)}
+                className="w-full sm:w-auto gap-2"
+                asChild
               >
-                Inspect UI Components
+                <Link href="/documents">
+                  Browse Document Vault
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -446,58 +449,81 @@ export default function HomePage() {
       <Footer />
 
       {/* ============================================================ */}
-      {/* INTERACTIVE COMPONENT PREVIEW MODAL (Demonstrates Dialog, Button, Input, Card, Badge) */}
+      {/* INTERACTIVE PRODUCT TOUR MODAL (Verifiable Grounded Citations) */}
       {/* ============================================================ */}
       <Dialog open={demoDialogOpen} onOpenChange={setDemoDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Phase 2 UI Component Showcase</DialogTitle>
+            <div className="flex items-center gap-2 mb-1 text-blue-600 dark:text-blue-400">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Product Tour</span>
+            </div>
+            <DialogTitle>Grounded RAG with Verifiable Citations</DialogTitle>
             <DialogDescription>
-              All components are built in 100% pure JavaScript with Tailwind CSS and zero TypeScript.
+              Every answer generated in DocuMind is strictly anchored to your uploaded document passages with zero hallucinations.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Sample Form Input
-              </label>
-              <Input placeholder="e.g. FY2026 Strategy Document..." />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Badge Variants
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="default">Primary</Badge>
-                <Badge variant="secondary">Secondary</Badge>
-                <Badge variant="outline">Outline</Badge>
-                <Badge variant="success">Indexed</Badge>
-                <Badge variant="warning">Processing</Badge>
-                <Badge variant="destructive">Failed</Badge>
+          <div className="space-y-4 py-2 text-xs">
+            {/* Context Header */}
+            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 truncate">
+                <div className="p-1.5 rounded-lg bg-blue-600 text-white shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="truncate">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                    Enterprise_Service_Agreement_2026.pdf
+                  </p>
+                  <p className="text-[10px] text-slate-400">pgvector chunking • 768-dim embeddings</p>
+                </div>
               </div>
+              <Badge variant="success" className="text-[10px] shrink-0">Indexed</Badge>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Button Styles
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm">Default</Button>
-                <Button variant="secondary" size="sm">Secondary</Button>
-                <Button variant="outline" size="sm">Outline</Button>
-                <Button variant="destructive" size="sm">Delete</Button>
+            {/* Q&A Simulation */}
+            <div className="space-y-2.5">
+              <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/40 text-blue-900 dark:text-blue-200">
+                <span className="font-semibold text-[11px] uppercase tracking-wide text-blue-600 dark:text-blue-400 block mb-1">
+                  Sample Query:
+                </span>
+                &quot;What is the maximum liability limit and indemnification exception?&quot;
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300 leading-relaxed shadow-xs">
+                <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold text-[11px]">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  DocuMind Synthesized Answer
+                </div>
+                <p>
+                  Total cumulative liability is capped at <strong>2x the annual contract value</strong> for standard breaches{" "}
+                  <Badge variant="secondary" className="text-[9px] py-0 px-1 font-mono align-baseline">
+                    # SOURCE 1
+                  </Badge>
+                  . Gross negligence, willful misconduct, and confidentiality breaches are expressly uncapped{" "}
+                  <Badge variant="secondary" className="text-[9px] py-0 px-1 font-mono align-baseline">
+                    # SOURCE 2
+                  </Badge>
+                  .
+                </p>
+
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 text-[10px] text-slate-400">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span>Cross-checked against Section 14.1 & 14.3 (95.8% similarity score)</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <DialogClose asChild>
-              <Button variant="outline">Close Preview</Button>
+              <Button variant="outline">Close Tour</Button>
             </DialogClose>
-            <Button onClick={() => setDemoDialogOpen(false)}>
-              Got It!
+            <Button size="md" className="gap-1.5 shadow-sm" asChild>
+              <Link href="/dashboard">
+                Explore Workspace
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </Button>
           </DialogFooter>
         </DialogContent>

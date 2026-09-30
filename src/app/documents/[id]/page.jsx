@@ -656,7 +656,7 @@ export default function DocumentDetailsPage() {
                           variant="outline"
                           size="sm"
                           onClick={handleCopy}
-                          className="gap-1.5 text-xs h-8"
+                          className="gap-1.5 text-xs shadow-xs"
                         >
                           {copied ? (
                             <>
@@ -1254,7 +1254,7 @@ export default function DocumentDetailsPage() {
                                 variant="outline"
                                 onClick={() => handleAskQuestion(lastQaQuestion)}
                                 disabled={qaLoading}
-                                className={`shrink-0 text-xs gap-1.5 h-8 font-medium ${
+                                className={`shrink-0 text-xs gap-1.5 font-medium ${
                                   isAmber
                                     ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
                                     : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"

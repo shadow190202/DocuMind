@@ -185,8 +185,8 @@ export default function UploadPage() {
             </Button>
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Upload Document</h1>
           </div>
-          <Badge variant="outline" className="text-xs">
-            Phase 5 Ingestion Pipeline
+          <Badge variant="outline" className="text-xs font-medium">
+            Secure Ingestion
           </Badge>
         </header>
 
@@ -281,7 +281,7 @@ export default function UploadPage() {
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <Button onClick={handleUpload} disabled={uploading} className="gap-2">
+                    <Button onClick={handleUpload} disabled={uploading} size="md" className="gap-2 min-w-[140px]">
                       {uploading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -310,7 +310,7 @@ export default function UploadPage() {
                         Document Uploaded Successfully!
                       </h4>
                       <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-                        Saved to storage and registered in PostgreSQL. Ready for text extraction in Phase 6.
+                        Saved to secure storage and registered in PostgreSQL. Ready for text extraction and semantic processing.
                       </p>
                     </div>
                   </div>
@@ -333,15 +333,15 @@ export default function UploadPage() {
                   </div>
 
                   <div className="flex items-center gap-3 pt-2">
-                    <Button asChild size="sm" className="gap-1.5">
+                    <Button asChild size="md" className="gap-2 shadow-sm">
                       <Link href="/documents">
                         View in Documents
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <ArrowRight className="w-4 h-4" />
                       </Link>
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="md"
                       onClick={() => {
                         setUploadResult(null);
                         setSelectedFile(null);

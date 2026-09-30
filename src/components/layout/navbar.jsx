@@ -40,11 +40,6 @@ export function Navbar({ onOpenDemoModal }) {
 
         {/* Action Buttons with Clerk Auth State */}
         <div className="hidden md:flex items-center gap-3">
-          {onOpenDemoModal && (
-            <Button variant="ghost" size="sm" onClick={onOpenDemoModal}>
-              Preview Modal
-            </Button>
-          )}
 
           {/* Shown when user is logged out */}
           <SignedOut>

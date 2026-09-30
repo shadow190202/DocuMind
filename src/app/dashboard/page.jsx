@@ -77,8 +77,9 @@ export default function DashboardPage() {
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Workspace Dashboard
             </h1>
-            <Badge variant="secondary" className="text-[11px]">
-              Phase 5 Ingestion Active
+            <Badge variant="secondary" className="text-[11px] gap-1.5 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              RAG Pipeline Active
             </Badge>
           </div>
 
@@ -86,7 +87,7 @@ export default function DashboardPage() {
             <Button variant="outline" size="sm" asChild>
               <Link href="/">Landing Page</Link>
             </Button>
-            <Button size="sm" className="gap-1.5 shadow-sm" asChild>
+            <Button size="md" className="gap-2 shadow-sm" asChild>
               <Link href="/documents/upload">
                 <Upload className="w-4 h-4" />
                 Upload Document
@@ -136,7 +137,7 @@ export default function DashboardPage() {
                     ? "..."
                     : docs.filter((d) => d.processingStatus === "pending").length}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">Queued for Phase 6 parser</p>
+                <p className="text-[10px] text-slate-400 mt-1">Queued for text extraction</p>
               </CardContent>
             </Card>
 
@@ -197,7 +198,7 @@ export default function DashboardPage() {
                       : "No documents uploaded yet. Upload your first document to get started."}
                   </p>
                   {!filterQuery && (
-                    <Button asChild size="sm" className="gap-1.5">
+                    <Button asChild size="md" className="gap-2 shadow-sm">
                       <Link href="/documents/upload">
                         <Upload className="w-4 h-4" />
                         Upload Document
