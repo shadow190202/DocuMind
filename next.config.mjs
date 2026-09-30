@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
+    outputFileTracingIncludes: {
+      "/api/**/*": ["./node_modules/pdfjs-dist/**/*"],
+    },
   },
   async headers() {
     const isProd = process.env.NODE_ENV === "production";

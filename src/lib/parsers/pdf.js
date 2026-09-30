@@ -1,6 +1,8 @@
 import { createRequire } from "module";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import * as pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
-// Polyfill DOM and Canvas constructs required by pdfjs-dist / pdf-parse in Node.js serverless environments.
+// Polyfill DOM and Canvas constructs required by pdfjs-dist in Node.js serverless environments.
 // Serverless runtimes like AWS Lambda and Vercel lack native GUI/canvas libraries (@napi-rs/canvas),
 // causing unhandled ReferenceErrors (DOMMatrix is not defined) or module missing crashes.
 class DOMMatrixPolyfill {
@@ -111,6 +113,9 @@ if (typeof globalThis.Path2D === "undefined") {
   globalThis.Path2D = Path2DPolyfill;
 }
 
+// Statically assign worker to globalThis.pdfjsWorker so pdfjs-dist never executes untraced filesystem lookups
+globalThis.pdfjsWorker = pdfjsWorker;
+
 // Intercept @napi-rs/canvas in require cache so pdfjs-dist never fails or warns
 try {
   const require = createRequire(import.meta.url);
@@ -146,18 +151,8 @@ try {
   // Gracefully continue if require hook cannot be set
 }
 
-let cachedPDFParse = null;
-
-async function getPDFParseClass() {
-  if (!cachedPDFParse) {
-    const mod = await import("pdf-parse");
-    cachedPDFParse = mod.PDFParse || mod.default?.PDFParse || mod.default;
-  }
-  return cachedPDFParse;
-}
-
 /**
- * PDF (.pdf) document parser using pdf-parse with serverless polyfills.
+ * PDF (.pdf) document parser using pdfjs-dist legacy with serverless worker and DOM polyfills.
  * Extracts full text and per-page text content safely without native dependencies.
  */
 export async function parsePdf(buffer) {
@@ -170,41 +165,71 @@ export async function parsePdf(buffer) {
     };
   }
 
-  const PDFParseClass = await getPDFParseClass();
-  const parser = new PDFParseClass({ data: buffer });
+  // Ensure worker is registered on globalThis before document parsing
+  if (!globalThis.pdfjsWorker) {
+    globalThis.pdfjsWorker = pdfjsWorker;
+  }
+
+  // Pure Uint8Array slice to satisfy pdfjs-dist (Buffer.isBuffer must be false)
+  const uint8Data = Buffer.isBuffer(buffer)
+    ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+    : buffer instanceof Uint8Array
+      ? buffer
+      : new Uint8Array(buffer);
+
+  const loadingTask = pdfjsLib.getDocument({
+    data: uint8Data,
+    useSystemFonts: true,
+    disableFontFace: true,
+    isEvalSupported: false,
+  });
 
   try {
-    const result = await parser.getText();
-    const normalizedText = (result.text || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n")
+    const doc = await loadingTask.promise;
+    const pageCount = doc.numPages || 0;
+    const pages = [];
+    const textSegments = [];
+
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item) => item.str || "")
+        .join(" ")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .trim();
+
+      pages.push({
+        pageNumber: i,
+        text: pageText,
+      });
+
+      if (pageText) {
+        textSegments.push(pageText);
+      }
+    }
+
+    await doc.destroy();
+
+    const normalizedText = textSegments
+      .join("\n\n")
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
       .trim();
 
-    // Map extracted pages
-    const rawPages = result.pages || [];
-    const pages = rawPages.map((p, idx) => ({
-      pageNumber: p.num || idx + 1,
-      text: (p.text || "")
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .trim(),
-    }));
-
     return {
       text: normalizedText,
-      pageCount: result.total || pages.length || 1,
+      pageCount: pageCount || 1,
       pages: pages.length > 0 ? pages : [{ pageNumber: 1, text: normalizedText }],
       metadata: {
         format: "pdf",
-        total: result.total || pages.length || 1,
+        total: pageCount || 1,
       },
     };
-  } finally {
+  } catch (err) {
     try {
-      await parser.destroy();
-    } catch {
-      // Ignore destroy errors if already cleaned up
-    }
+      await loadingTask.destroy();
+    } catch {}
+    throw err;
   }
 }
