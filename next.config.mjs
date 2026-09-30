@@ -7,6 +7,27 @@ const nextConfig = {
       "/api/**/*": ["./node_modules/pdfjs-dist/**/*"],
     },
   },
+  async rewrites() {
+    const clerkFrontendApi =
+      process.env.CLERK_FRONTEND_API_URL ||
+      process.env.NEXT_PUBLIC_CLERK_FRONTEND_API ||
+      process.env.CLERK_PROXY_DESTINATION;
+    if (!clerkFrontendApi) {
+      return [];
+    }
+    // Clean origin in case user provided trailing slash
+    const origin = clerkFrontendApi.replace(/\/$/, "");
+    const destination = origin.endsWith("/__clerk")
+      ? `${origin}/:path*`
+      : `${origin}/__clerk/:path*`;
+
+    return [
+      {
+        source: "/__clerk/:path*",
+        destination,
+      },
+    ];
+  },
   async headers() {
     // Clerk client-side authentication SDK requires 'unsafe-eval' for runtime compilation/widgets
     const scriptSrc =
