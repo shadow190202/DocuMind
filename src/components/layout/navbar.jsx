@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Sparkles, Menu, X, ArrowRight, LayoutDashboard } from "lucide-react";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
 export function Navbar({ onOpenDemoModal }) {
@@ -40,7 +40,6 @@ export function Navbar({ onOpenDemoModal }) {
 
         {/* Action Buttons with Clerk Auth State */}
         <div className="hidden md:flex items-center gap-3">
-
           {/* Shown when user is logged out */}
           <SignedOut>
             <Button variant="outline" size="sm" asChild>
@@ -59,7 +58,7 @@ export function Navbar({ onOpenDemoModal }) {
             <Button size="sm" variant="outline" className="gap-1.5" asChild>
               <Link href="/dashboard">
                 <LayoutDashboard className="w-4 h-4" />
-                Dashboard
+                Go to Dashboard
               </Link>
             </Button>
             <UserButton
@@ -73,18 +72,26 @@ export function Navbar({ onOpenDemoModal }) {
           </SignedIn>
         </div>
 
-        {/* Mobile Hamburger Toggle */}
-        <div className="flex md:hidden items-center gap-3">
+        {/* Mobile Header Right Section */}
+        <div className="flex md:hidden items-center gap-2">
+          <SignedOut>
+            <Button variant="ghost" size="sm" asChild className="text-xs px-2.5 h-8">
+              <Link href="/sign-in">Sign In</Link>
+            </Button>
+            <Button size="sm" asChild className="text-xs px-3 h-8 shadow-xs">
+              <Link href="/sign-up">Sign Up</Link>
+            </Button>
+          </SignedOut>
           <SignedIn>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
@@ -132,7 +139,7 @@ export function Navbar({ onOpenDemoModal }) {
               </Button>
               <Button className="w-full justify-center gap-1.5" asChild>
                 <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
-                  Get Started
+                  Get Started Free
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
@@ -141,7 +148,7 @@ export function Navbar({ onOpenDemoModal }) {
               <Button className="w-full justify-center gap-1.5" asChild>
                 <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                   <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
+                  Go to Dashboard
                 </Link>
               </Button>
             </SignedIn>
