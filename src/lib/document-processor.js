@@ -13,6 +13,7 @@ import {
   generateBatchEmbeddings,
   EXPECTED_DIMENSIONS,
 } from "./ai/gemini.js";
+import { validateDocumentBuffer } from "./validations/document.js";
 
 /**
  * Authoritative end-to-end document processing pipeline.
@@ -68,6 +69,22 @@ export async function executeDocumentProcessing({ document: doc }) {
       .where(eq(documents.id, id));
 
     return { success: false, error: errMsg, status: 500, chunksCount: 0 };
+  }
+
+  // 2.1 Deep binary inspection & magic-byte validation
+  const bufferValidation = validateDocumentBuffer(fileBuffer, doc.fileType);
+  if (!bufferValidation.valid) {
+    const errMsg = `Document validation failed: ${bufferValidation.error}`;
+    await activeDb
+      .update(documents)
+      .set({
+        processingStatus: "failed",
+        errorMessage: errMsg,
+        updatedAt: new Date(),
+      })
+      .where(eq(documents.id, id));
+
+    return { success: false, error: errMsg, status: 400, chunksCount: 0 };
   }
 
   // 3. Extract text using dedicated parser

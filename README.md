@@ -1,5 +1,7 @@
 # DocuMind — AI Document Intelligence & Knowledge Assistant
 
+* [Check here](https://docu-mind-dun.vercel.app/)
+
 [![JavaScript](https://img.shields.io/badge/JavaScript-100%25-f7df1e?logo=javascript&logoColor=black)](package.json)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.35-black?logo=next.js)](package.json)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector_(768d)-336791?logo=postgresql&logoColor=white)](src/db/schema.js)
@@ -44,7 +46,7 @@ flowchart TD
 * **Multi-Format Document Ingestion:** Supports PDF, DOCX, TXT, and CSV up to 20 MB with deep binary magic-byte validation and disguised executable detection.
 * **Accurate Page-Level Citation:** PDF text extraction preserves genuine physical page numbers, enabling grounded answers with verifiable page references.
 * **Semantic Vector Search:** Chunk embeddings generated using `gemini-embedding-001` (768 dimensions) and indexed using PostgreSQL `pgvector` cosine distance (`<=>`).
-* **Hallucination-Resistant Grounded Chat:** Powered by `gemini-2.5-flash` with token-budgeted context assembly and fallback messaging when context is insufficient.
+* **Hallucination-Resistant Grounded Chat:** Powered by `gemini-3.8-flash` with token-budgeted context assembly and fallback messaging when context is insufficient.
 * **Document Summarization:** Generates structured executive, bullet-point, and key-takeaway summaries with database caching to eliminate redundant AI calls.
 * **Side-by-Side Document Comparison:** Analyzes two documents to extract structured similarities, key differences, and actionable recommendations.
 * **Granular Document Sharing & Permissions:** Role-based access (`read`, `write`, `admin`) per document with IDOR prevention returning uniform 404 responses.
@@ -56,29 +58,31 @@ flowchart TD
 
 ## Technology Stack
 
-| Layer | Technologies | Version / Specification |
-| :--- | :--- | :--- |
-| **Language & Runtime** | JavaScript (Node.js 20 LTS) | 100% JS (`.js`, `.jsx`, `.mjs`); Zero TypeScript |
-| **Frontend** | Next.js App Router, React, Tailwind CSS | Next.js `14.2.35`, React `18.3.1`, Tailwind `3.4.14` |
-| **Database & ORM** | PostgreSQL with `pgvector`, Drizzle ORM | `postgres: ^3.4.9`, `drizzle-orm: ^0.45.3` |
-| **Vector Dimension** | pgvector 768-dimensional cosine index | `vector(768)` matching `gemini-embedding-001` |
-| **AI Models** | Google Gemini Free Tier (`@google/genai`) | `gemini-embedding-001` (Embeddings), `gemini-2.5-flash` (Chat/Analysis) |
-| **Authentication** | Clerk (`@clerk/nextjs`) | Clerk `^6.39.7` + PostgreSQL authoritative role check |
-| **Document Parsers** | `pdf-parse`, `mammoth`, `csv-parse` | Ingestion for PDF, DOCX, TXT, CSV |
-| **Testing** | Playwright, Custom ESM Test Orchestrators | `@playwright/test: ^1.63.0`, 576 verified checks |
-| **Containerization** | Docker Multi-Stage Build | `node:20-bookworm-slim`, unprivileged user `nextjs` (UID 1001) |
+| Layer                        | Technologies                                | Version / Specification                                                     |
+| :--------------------------- | :------------------------------------------ | :-------------------------------------------------------------------------- |
+| **Language & Runtime** | JavaScript (Node.js 20 LTS)                 | 100% JS (`.js`, `.jsx`, `.mjs`); Zero TypeScript                      |
+| **Frontend**           | Next.js App Router, React, Tailwind CSS     | Next.js`14.2.35`, React `18.3.1`, Tailwind `3.4.14`                   |
+| **Database & ORM**     | PostgreSQL with`pgvector`, Drizzle ORM    | `postgres: ^3.4.9`, `drizzle-orm: ^0.45.3`                              |
+| **Vector Dimension**   | pgvector 768-dimensional cosine index       | `vector(768)` matching `gemini-embedding-001`                           |
+| **AI Models**          | Google Gemini Free Tier (`@google/genai`) | `gemini-embedding-001` (Embeddings), `gemini-3.8-flash` (Chat/Analysis) |
+| **Authentication**     | Clerk (`@clerk/nextjs`)                   | Clerk`^6.39.7` + PostgreSQL authoritative role check                      |
+| **Document Parsers**   | `pdf-parse`, `mammoth`, `csv-parse`   | Ingestion for PDF, DOCX, TXT, CSV                                           |
+| **Testing**            | Playwright, Custom ESM Test Orchestrators   | `@playwright/test: ^1.63.0`, 576 verified checks                          |
+| **Containerization**   | Docker Multi-Stage Build                    | `node:20-bookworm-slim`, unprivileged user `nextjs` (UID 1001)          |
 
 ---
 
 ## Quick Start (Local Development)
 
 ### 1. Prerequisites
+
 * **Node.js:** `v20.x` LTS or later
 * **PostgreSQL:** `v15` or `v16` with the `pgvector` extension enabled (`CREATE EXTENSION IF NOT EXISTS vector;`)
 * **Clerk Account:** Free account from [Clerk.com](https://clerk.com) (Publishable & Secret Keys)
 * **Google Gemini API Key:** Free key from [Google AI Studio](https://aistudio.google.com/)
 
 ### 2. Installation & Setup
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/your-username/documind.git
@@ -92,7 +96,9 @@ cp .env.example .env.local
 ```
 
 ### 3. Configure `.env.local`
+
 Open `.env.local` and provide your credentials:
+
 ```ini
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/documind
@@ -107,15 +113,19 @@ STORAGE_PROVIDER=local
 ```
 
 ### 4. Database Migrations
+
 Apply the forward-only Drizzle migrations (0000–0007):
+
 ```bash
 npm run db:migrate
 ```
 
 ### 5. Run Development Server
+
 ```bash
 npm run dev
 ```
+
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
@@ -178,18 +188,18 @@ For full setup instructions, reverse proxy configuration, and admin bootstrappin
 
 Explore the complete technical documentation suite:
 
-| Documentation Guide | Description |
-| :--- | :--- |
-| [**System Architecture**](docs/architecture/SYSTEM_ARCHITECTURE.md) | End-to-end component architecture, ingestion and RAG retrieval pipelines, and storage containment. |
-| [**Database Schema & ERD**](docs/architecture/DATABASE_SCHEMA.md) | Full 9-table schema dictionary, foreign key cascades, pgvector 768d indexes, and migration history. |
-| [**API Reference Contract**](docs/api/API_REFERENCE.md) | Exhaustive OpenAPI-style reference covering all 30 route files and 37 HTTP endpoint operations. |
-| [**Security Model & Manifesto**](docs/security/SECURITY_MODEL.md) | 13 hardened security layers, path traversal defenses, synthetic auth isolation, and threat mitigations. |
-| [**Testing Strategy & Pyramid**](docs/testing/TESTING_STRATEGY.md) | 3-tier testing pyramid (576 verified checks), offline mock transport guard, and zero-orphan audits. |
-| [**Portfolio Case Study**](docs/portfolio/PORTFOLIO_CASE_STUDY.md) | Technical case study detailing architectural trade-offs, engineering challenges, and verified outcomes. |
-| [**Demo Walkthrough Script**](docs/portfolio/DEMO_WALKTHROUGH.md) | Step-by-step 10-scenario script for live demonstrations, recruiter evaluations, and video walkthroughs. |
-| [**Production Deployment Guide**](docs/deployment/DEPLOYMENT_GUIDE.md) | Production setup guide for Linux VPS, persistent host volumes, pre-deployment migrations, and Nginx. |
-| [**Smoke Test Checklist**](docs/deployment/SMOKE_TEST_CHECKLIST.md) | 18-point post-deployment manual and automated verification runbook. |
-| [**Troubleshooting Manual**](docs/deployment/TROUBLESHOOTING.md) | Operational remediation manual for pgvector, storage permissions, Clerk CSP, and rate limiting. |
+| Documentation Guide                                                         | Description                                                                                             |
+| :-------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
+| [**System Architecture**](docs/architecture/SYSTEM_ARCHITECTURE.md)    | End-to-end component architecture, ingestion and RAG retrieval pipelines, and storage containment.      |
+| [**Database Schema & ERD**](docs/architecture/DATABASE_SCHEMA.md)      | Full 9-table schema dictionary, foreign key cascades, pgvector 768d indexes, and migration history.     |
+| [**API Reference Contract**](docs/api/API_REFERENCE.md)                | Exhaustive OpenAPI-style reference covering all 30 route files and 37 HTTP endpoint operations.         |
+| [**Security Model & Manifesto**](docs/security/SECURITY_MODEL.md)      | 13 hardened security layers, path traversal defenses, synthetic auth isolation, and threat mitigations. |
+| [**Testing Strategy & Pyramid**](docs/testing/TESTING_STRATEGY.md)     | 3-tier testing pyramid (576 verified checks), offline mock transport guard, and zero-orphan audits.     |
+| [**Portfolio Case Study**](docs/portfolio/PORTFOLIO_CASE_STUDY.md)     | Technical case study detailing architectural trade-offs, engineering challenges, and verified outcomes. |
+| [**Demo Walkthrough Script**](docs/portfolio/DEMO_WALKTHROUGH.md)      | Step-by-step 10-scenario script for live demonstrations, recruiter evaluations, and video walkthroughs. |
+| [**Production Deployment Guide**](docs/deployment/DEPLOYMENT_GUIDE.md) | Production setup guide for Linux VPS, persistent host volumes, pre-deployment migrations, and Nginx.    |
+| [**Smoke Test Checklist**](docs/deployment/SMOKE_TEST_CHECKLIST.md)    | 18-point post-deployment manual and automated verification runbook.                                     |
+| [**Troubleshooting Manual**](docs/deployment/TROUBLESHOOTING.md)       | Operational remediation manual for pgvector, storage permissions, Clerk CSP, and rate limiting.         |
 
 ---
 

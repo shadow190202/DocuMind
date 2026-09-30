@@ -1,10 +1,24 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { put, get, del } from "@vercel/blob";
 
 // Root storage directories outside public web root for security
 export const STORAGE_ROOT = path.resolve(process.cwd(), "storage", "documents");
 export const EXTRACTED_ROOT = path.resolve(process.cwd(), "storage", "extracted");
+
+/**
+ * Determines current storage provider: 'vercel-blob' | 'local'
+ * @returns {'vercel-blob' | 'local'}
+ */
+export function getStorageProvider() {
+  const configured = process.env.STORAGE_PROVIDER?.toLowerCase();
+  if (configured === "vercel-blob") return "vercel-blob";
+  if (configured === "local") return "local";
+  // If BLOB_READ_WRITE_TOKEN is configured and not explicitly local, use vercel-blob
+  if (process.env.BLOB_READ_WRITE_TOKEN) return "vercel-blob";
+  return "local";
+}
 
 /**
  * Ensures the target directory exists.
@@ -76,7 +90,7 @@ export function safeResolvePath(rootDir, relativePath) {
 }
 
 /**
- * Saves a file buffer securely to the user's isolated storage directory.
+ * Saves a file buffer securely to the user's isolated storage directory or Vercel Blob.
  * @param {Buffer} buffer - File buffer
  * @param {string} originalFilename - Original uploaded filename
  * @param {string} userId - Authenticated user ID (Clerk ID)
@@ -84,9 +98,6 @@ export function safeResolvePath(rootDir, relativePath) {
  */
 export async function saveFile(buffer, originalFilename, userId) {
   const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const userDir = safeResolvePath(STORAGE_ROOT, sanitizedUserId);
-  ensureDirectory(userDir);
-
   const fileId = crypto.randomUUID();
   const ext = path.extname(originalFilename).toLowerCase();
   const baseName = path
@@ -95,8 +106,25 @@ export async function saveFile(buffer, originalFilename, userId) {
     .substring(0, 50);
 
   const uniqueFileName = `${fileId}-${baseName}${ext}`;
-  const filePath = safeResolvePath(userDir, uniqueFileName);
 
+  if (getStorageProvider() === "vercel-blob") {
+    const blobPath = `documents/${sanitizedUserId}/${uniqueFileName}`;
+    const blob = await put(blobPath, buffer, {
+      access: "private",
+      addRandomSuffix: false,
+    });
+
+    return {
+      storageUrl: blob.url,
+      fileId,
+      filePath: blob.url,
+    };
+  }
+
+  const userDir = safeResolvePath(STORAGE_ROOT, sanitizedUserId);
+  ensureDirectory(userDir);
+
+  const filePath = safeResolvePath(userDir, uniqueFileName);
   await fs.promises.writeFile(filePath, buffer);
 
   // Return relative storage URL representation
@@ -110,23 +138,42 @@ export async function saveFile(buffer, originalFilename, userId) {
 }
 
 /**
- * Reads a stored file buffer given its storageUrl.
+ * Reads a stored file buffer given its storageUrl (local:// or Vercel Blob URL).
  * @param {string} storageUrl 
  * @returns {Promise<Buffer>}
  */
 export async function getFile(storageUrl) {
-  if (!storageUrl || typeof storageUrl !== "string" || !storageUrl.startsWith("local://documents/")) {
-    throw new Error("Invalid storage URL protocol.");
+  if (!storageUrl || typeof storageUrl !== "string") {
+    throw new Error("Invalid storage URL.");
   }
 
-  const rawRelativePath = storageUrl.replace("local://documents/", "");
-  const absolutePath = safeResolvePath(STORAGE_ROOT, rawRelativePath);
+  if (storageUrl.startsWith("local://documents/")) {
+    const rawRelativePath = storageUrl.replace("local://documents/", "");
+    const absolutePath = safeResolvePath(STORAGE_ROOT, rawRelativePath);
 
-  if (!fs.existsSync(absolutePath)) {
-    throw new Error("File not found in storage.");
+    if (!fs.existsSync(absolutePath)) {
+      throw new Error("File not found in storage.");
+    }
+
+    return fs.promises.readFile(absolutePath);
   }
 
-  return fs.promises.readFile(absolutePath);
+  if (storageUrl.startsWith("http://") || storageUrl.startsWith("https://")) {
+    const result = await get(storageUrl, { access: "private" });
+    if (!result || result.statusCode === 404) {
+      throw new Error("File not found in storage.");
+    }
+
+    const stream = result.stream || result.body;
+    if (!stream) {
+      throw new Error("Empty storage response body.");
+    }
+
+    const arrayBuffer = await new Response(stream).arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  throw new Error("Invalid storage URL protocol.");
 }
 
 /**
@@ -135,20 +182,33 @@ export async function getFile(storageUrl) {
  * @returns {Promise<boolean>}
  */
 export async function deleteFile(storageUrl) {
-  if (!storageUrl || typeof storageUrl !== "string" || !storageUrl.startsWith("local://documents/")) {
+  if (!storageUrl || typeof storageUrl !== "string") {
     return false;
   }
 
-  try {
-    const rawRelativePath = storageUrl.replace("local://documents/", "");
-    const absolutePath = safeResolvePath(STORAGE_ROOT, rawRelativePath);
+  if (storageUrl.startsWith("local://documents/")) {
+    try {
+      const rawRelativePath = storageUrl.replace("local://documents/", "");
+      const absolutePath = safeResolvePath(STORAGE_ROOT, rawRelativePath);
 
-    if (fs.existsSync(absolutePath)) {
-      await fs.promises.unlink(absolutePath);
-      return true;
+      if (fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+        return true;
+      }
+    } catch (error) {
+      console.error("Failed to delete file from local storage:", error.message);
     }
-  } catch (error) {
-    console.error("Failed to delete file from storage:", error.message);
+    return false;
+  }
+
+  if (storageUrl.startsWith("http://") || storageUrl.startsWith("https://")) {
+    try {
+      await del(storageUrl);
+      return true;
+    } catch (error) {
+      console.error("Failed to delete file from blob storage:", error.message);
+    }
+    return false;
   }
 
   return false;
@@ -159,16 +219,29 @@ export async function deleteFile(storageUrl) {
  * @param {Object} data - Extracted data object
  * @param {string} documentId - Document UUID
  * @param {string} userId - Clerk user ID
- * @returns {Promise<string>} - Absolute path to stored JSON
+ * @returns {Promise<string>} - Absolute path or URL to stored JSON
  */
 export async function saveExtractedData(data, documentId, userId) {
   const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
   const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const jsonContent = JSON.stringify(data, null, 2);
+
+  if (getStorageProvider() === "vercel-blob") {
+    const blobPath = `extracted/${sanitizedUserId}/${sanitizedDocId}.json`;
+    const blob = await put(blobPath, jsonContent, {
+      access: "private",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: "application/json",
+    });
+    return blob.url;
+  }
+
   const userDir = safeResolvePath(EXTRACTED_ROOT, sanitizedUserId);
   ensureDirectory(userDir);
 
   const filePath = safeResolvePath(userDir, `${sanitizedDocId}.json`);
-  await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+  await fs.promises.writeFile(filePath, jsonContent, "utf8");
   return filePath;
 }
 
@@ -179,20 +252,38 @@ export async function saveExtractedData(data, documentId, userId) {
  * @returns {Promise<Object|null>} - Parsed extracted data or null
  */
 export async function getExtractedData(documentId, userId) {
-  try {
-    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filePath = safeResolvePath(EXTRACTED_ROOT, `${sanitizedUserId}/${sanitizedDocId}.json`);
+  const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
 
-    if (!fs.existsSync(filePath)) {
+  // Check local filesystem first
+  try {
+    const filePath = safeResolvePath(EXTRACTED_ROOT, `${sanitizedUserId}/${sanitizedDocId}.json`);
+    if (fs.existsSync(filePath)) {
+      const raw = await fs.promises.readFile(filePath, "utf8");
+      return JSON.parse(raw);
+    }
+  } catch {
+    // Continue to blob if local path resolution fails or file does not exist
+  }
+
+  // Check Vercel Blob if configured
+  if (getStorageProvider() === "vercel-blob" || process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      const blobPath = `extracted/${sanitizedUserId}/${sanitizedDocId}.json`;
+      const result = await get(blobPath, { access: "private", useCache: false });
+      if (result) {
+        const stream = result.stream || result.body;
+        if (stream) {
+          const text = await new Response(stream).text();
+          return JSON.parse(text);
+        }
+      }
+    } catch {
       return null;
     }
-
-    const raw = await fs.promises.readFile(filePath, "utf8");
-    return JSON.parse(raw);
-  } catch {
-    return null;
   }
+
+  return null;
 }
 
 /**
@@ -202,17 +293,29 @@ export async function getExtractedData(documentId, userId) {
  * @returns {Promise<boolean>}
  */
 export async function deleteExtractedData(documentId, userId) {
-  try {
-    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filePath = safeResolvePath(EXTRACTED_ROOT, `${sanitizedUserId}/${sanitizedDocId}.json`);
+  const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const sanitizedDocId = documentId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  let deleted = false;
 
+  try {
+    const filePath = safeResolvePath(EXTRACTED_ROOT, `${sanitizedUserId}/${sanitizedDocId}.json`);
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
-      return true;
+      deleted = true;
     }
   } catch (error) {
-    console.error("Failed to delete extracted data from storage:", error.message);
+    console.error("Failed to delete extracted data from local storage:", error.message);
   }
-  return false;
+
+  if (getStorageProvider() === "vercel-blob" || process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      const blobPath = `extracted/${sanitizedUserId}/${sanitizedDocId}.json`;
+      await del(blobPath);
+      deleted = true;
+    } catch (error) {
+      // Ignored if not found in blob
+    }
+  }
+
+  return deleted;
 }

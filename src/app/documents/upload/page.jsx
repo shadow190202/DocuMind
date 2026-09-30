@@ -18,6 +18,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { upload } from "@vercel/blob/client";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -101,21 +102,62 @@ export default function UploadPage() {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+      const isVercelBlob =
+        process.env.NEXT_PUBLIC_STORAGE_PROVIDER === "vercel-blob";
 
-      const response = await fetch("/api/documents/upload", {
-        method: "POST",
-        body: formData,
-      });
+      if (isVercelBlob) {
+        // Direct client upload to Vercel Blob (bypasses 4.5MB serverless body limit, supports 20MB)
+        const blob = await upload(selectedFile.name, selectedFile, {
+          access: "private",
+          handleUploadUrl: "/api/documents/upload",
+          clientPayload: JSON.stringify({
+            filename: selectedFile.name,
+            size: selectedFile.size,
+            type: selectedFile.type,
+          }),
+        });
 
-      const data = await response.json();
+        // Register document in PostgreSQL database
+        const registerResponse = await fetch("/api/documents/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "register",
+            blobUrl: blob.url,
+            filename: selectedFile.name,
+            fileSize: selectedFile.size,
+            fileType: selectedFile.type,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to upload document.");
+        const data = await registerResponse.json();
+
+        if (!registerResponse.ok) {
+          throw new Error(data.error || "Failed to register uploaded document.");
+        }
+
+        setUploadResult(data.document);
+      } else {
+        // Standard multipart upload (for local development & offline testing)
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const response = await fetch("/api/documents/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to upload document.");
+        }
+
+        setUploadResult(data.document);
       }
 
-      setUploadResult(data.document);
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
