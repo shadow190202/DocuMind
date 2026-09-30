@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { SummaryTab } from "@/components/documents/summary-tab";
 import { ShareDialog } from "@/components/documents/share-dialog";
+import { ChatMessageContent } from "@/components/chat/chat-message-content";
 
 export default function DocumentDetailsPage() {
   const params = useParams();
@@ -307,6 +308,20 @@ export default function DocumentDetailsPage() {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  const handleSourcePillClick = (msgId, srcNum) => {
+    const key = `${msgId}-${srcNum}`;
+    setExpandedSources((prev) => ({
+      ...prev,
+      [key]: true,
+    }));
+    setTimeout(() => {
+      const el = document.getElementById(`doc-source-${msgId}-${srcNum}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }, 50);
   };
 
   const handleClearChat = async () => {
@@ -1098,9 +1113,13 @@ export default function DocumentDetailsPage() {
                                   )}
                                 </div>
 
-                                <div className="whitespace-pre-wrap leading-relaxed select-text font-sans">
-                                  {msg.content}
-                                </div>
+                                 <ChatMessageContent
+                                  content={msg.content}
+                                  isUser={msg.role === "user"}
+                                  onSourceClick={(srcNum) =>
+                                    handleSourcePillClick(msg.id, srcNum)
+                                  }
+                                />
 
                                 {/* Source Citations Container */}
                                 {msg.sources && msg.sources.length > 0 && (
@@ -1119,6 +1138,7 @@ export default function DocumentDetailsPage() {
                                         return (
                                           <div
                                             key={src.sourceNumber}
+                                            id={`doc-source-${msg.id}-${src.sourceNumber}`}
                                             className="rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/60 text-[11px] overflow-hidden"
                                           >
                                             <div

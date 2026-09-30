@@ -3,6 +3,8 @@ import {
   parseMarkdownBoldSegments,
   isMarkdownTable,
   parseTableCells,
+  parseInlineTokens,
+  splitMarkdownBlocks,
 } from "../../../src/lib/markdown.js";
 
 export async function run() {
@@ -51,6 +53,37 @@ export async function run() {
   const cellsWithoutOuter = parseTableCells(rowWithoutOuterPipes);
   assert.deepStrictEqual(cellsWithoutOuter, ["Col1", "Col2", "Col3"]);
   console.log("  ✅ parseTableCells trims and extracts cells across table row formats");
+  passed++;
+
+  // 4. Inline Tokens Parsing (Bold, Italic, Code, Source Citations)
+  const tokenString = "Here is **bold text**, `code segment`, *italic phrase*, and [SOURCE 1, 2] citation.";
+  const tokens = parseInlineTokens(tokenString);
+  assert.strictEqual(tokens.find((t) => t.type === "bold")?.text, "bold text");
+  assert.strictEqual(tokens.find((t) => t.type === "code")?.text, "code segment");
+  assert.strictEqual(tokens.find((t) => t.type === "italic")?.text, "italic phrase");
+  const srcToken = tokens.find((t) => t.type === "source");
+  assert.strictEqual(srcToken?.value, "1, 2");
+
+  // Verify bullet marker does not collide with bold
+  const bulletString = "* **Subject (CS101):** Grade A [SOURCE 1]";
+  const bulletTokens = parseInlineTokens(bulletString);
+  assert.strictEqual(bulletTokens[0].text, "* ");
+  assert.strictEqual(bulletTokens[1].type, "bold");
+  assert.strictEqual(bulletTokens[1].text, "Subject (CS101):");
+  assert.strictEqual(bulletTokens[3].type, "source");
+  assert.strictEqual(bulletTokens[3].value, "1");
+  console.log("  ✅ parseInlineTokens correctly handles bold, code, italic, source badges, and bullet boundaries");
+  passed++;
+
+  // 5. Block Splitting (Respecting Code Fences)
+  const markdownDoc = "Paragraph 1\n\n```javascript\nconst a = 1;\n\nconst b = 2;\n```\n\nParagraph 2";
+  const blocks = splitMarkdownBlocks(markdownDoc);
+  assert.strictEqual(blocks.length, 3);
+  assert.strictEqual(blocks[0], "Paragraph 1");
+  assert.ok(blocks[1].startsWith("```javascript"));
+  assert.ok(blocks[1].endsWith("```"));
+  assert.strictEqual(blocks[2], "Paragraph 2");
+  console.log("  ✅ splitMarkdownBlocks cleanly segments markdown and preserves code fence integrity");
   passed++;
 
   return { passed, failed: 0 };

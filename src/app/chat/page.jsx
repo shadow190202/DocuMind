@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { RenameModal } from "@/components/conversations/rename-modal";
 import { DeleteModal } from "@/components/conversations/delete-modal";
+import { ChatMessageContent } from "@/components/chat/chat-message-content";
 
 function ChatContent() {
   const searchParams = useSearchParams();
@@ -215,6 +216,20 @@ function ChatContent() {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  const handleSourcePillClick = (msgId, srcNum) => {
+    const key = `${msgId}-${srcNum}`;
+    setExpandedSources((prev) => ({
+      ...prev,
+      [key]: true,
+    }));
+    setTimeout(() => {
+      const el = document.getElementById(`source-${msgId}-${srcNum}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }, 50);
   };
 
   // Find active conversation details
@@ -457,7 +472,11 @@ function ChatContent() {
                       }`}
                     >
                       {/* Message Content Body */}
-                      <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+                      <ChatMessageContent
+                        content={msg.content}
+                        isUser={isUser}
+                        onSourceClick={(srcNum) => handleSourcePillClick(msg.id, srcNum)}
+                      />
 
                       {/* Source Citations Accordion (Assistant Only) */}
                       {!isUser && Array.isArray(msg.sources) && msg.sources.length > 0 && (
@@ -474,6 +493,7 @@ function ChatContent() {
                               return (
                                 <div
                                   key={src.sourceNumber}
+                                  id={`source-${msg.id}-${src.sourceNumber}`}
                                   className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-2.5 text-[11px]"
                                 >
                                   <div
