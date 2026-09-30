@@ -130,10 +130,15 @@ export default function DocumentDetailsPage() {
       const res = await fetch(`/api/documents/${documentId}/process`, {
         method: "POST",
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(`Server returned non-JSON response (${res.status})`);
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || "Processing failed.");
+        throw new Error(data?.error || "Processing failed.");
       }
 
       // Re-fetch document and extracted data

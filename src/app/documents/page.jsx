@@ -110,9 +110,14 @@ export default function DocumentsPage() {
       const res = await fetch(`/api/documents/${docId}/process`, {
         method: "POST",
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(`Server returned non-JSON response (${res.status})`);
+      }
       if (!res.ok) {
-        throw new Error(data.error || "Failed to process document.");
+        throw new Error(data?.error || "Failed to process document.");
       }
       // Update local state
       setDocs((prev) =>

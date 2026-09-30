@@ -110,6 +110,10 @@ export async function POST(req, { params }) {
 
     return applyRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    return handleApiError(error, req);
+    console.error("CRITICAL PROCESS ROUTE ERROR:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to process document" },
+      { status: 500 }
+    );
   }
 }
