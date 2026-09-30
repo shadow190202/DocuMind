@@ -159,17 +159,25 @@ export async function getFile(storageUrl) {
   }
 
   if (storageUrl.startsWith("http://") || storageUrl.startsWith("https://")) {
-    const result = await get(storageUrl, { access: "private" });
-    if (!result || result.statusCode === 404) {
-      throw new Error("File not found in storage.");
+    const headers = {};
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      headers["Authorization"] = `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`;
     }
 
-    const stream = result.stream || result.body;
-    if (!stream) {
-      throw new Error("Empty storage response body.");
+    const response = await fetch(storageUrl, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("File not found in storage.");
+      }
+      throw new Error(`Failed to fetch blob: (${response.status}) ${response.statusText}`);
     }
 
-    const arrayBuffer = await new Response(stream).arrayBuffer();
+    const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
   }
 

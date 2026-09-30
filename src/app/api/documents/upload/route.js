@@ -15,15 +15,39 @@ import { handleApiError } from "@/lib/errors";
 import { handleUpload } from "@vercel/blob/client";
 import { eq } from "drizzle-orm";
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, x-vercel-signature",
+    },
+  });
+}
+
+export async function GET() {
+  return NextResponse.json({ status: "ready" });
+}
+
 export async function POST(req) {
   try {
-    const contentType = req.headers.get("content-type") || "";
+    const contentType = (req.headers.get("content-type") || "").toLowerCase();
+    const hasVercelSignature = Boolean(req.headers.get("x-vercel-signature"));
 
     // --------------------------------------------------------------------------
     // 1. JSON Payloads: Vercel Blob direct uploads, token generation & webhooks
     // --------------------------------------------------------------------------
-    if (contentType.includes("application/json")) {
-      const body = await req.json();
+    if (contentType.includes("application/json") || hasVercelSignature) {
+      let body;
+      try {
+        body = await req.json();
+      } catch (jsonErr) {
+        return NextResponse.json(
+          { error: "Invalid JSON payload." },
+          { status: 400 }
+        );
+      }
 
       // Case 1A: Direct client registration after client-side upload to Vercel Blob
       if (body?.action === "register") {
@@ -172,7 +196,7 @@ export async function POST(req) {
             let payloadData = {};
             if (clientPayload) {
               try {
-                payloadData = JSON.parse(clientPayload);
+                payloadData = typeof clientPayload === "string" ? JSON.parse(clientPayload) : clientPayload;
               } catch {}
             }
 
@@ -219,7 +243,8 @@ export async function POST(req) {
           onUploadCompleted: async ({ blob, tokenPayload }) => {
             if (!tokenPayload) return;
             try {
-              const { userId, filename, fileSize, fileType } = JSON.parse(tokenPayload);
+              const data = typeof tokenPayload === "string" ? JSON.parse(tokenPayload) : tokenPayload;
+              const { userId, filename, fileSize, fileType } = data || {};
               if (!db || !userId) return;
 
               const existing = await db

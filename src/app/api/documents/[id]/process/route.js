@@ -17,6 +17,7 @@ import { assertValidOrigin } from "@/lib/auth/csrf";
 import { handleApiError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/documents/:id/process
@@ -77,7 +78,16 @@ export async function POST(req, { params }) {
     const doc = access.document;
 
     // 2. Execute authoritative processing pipeline under owner identity
-    const result = await executeDocumentProcessing({ document: doc });
+    let result;
+    try {
+      result = await executeDocumentProcessing({ document: doc });
+    } catch (error) {
+      console.error("Document processing failed:", error);
+      return NextResponse.json(
+        { error: error.message || "Processing failed" },
+        { status: 500 }
+      );
+    }
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: result.status || 500 });

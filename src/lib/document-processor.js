@@ -134,7 +134,11 @@ export async function executeDocumentProcessing({ document: doc }) {
     metadata: extractedResult.metadata,
   };
 
-  await saveExtractedData(extractedPayload, doc.id, doc.userId);
+  try {
+    await saveExtractedData(extractedPayload, doc.id, doc.userId);
+  } catch (saveErr) {
+    console.warn(`Failed to save extracted payload for doc ${id}:`, saveErr?.message);
+  }
 
   // 5. Divide text into semantic chunks
   const chunks = chunkDocument(extractedResult);
