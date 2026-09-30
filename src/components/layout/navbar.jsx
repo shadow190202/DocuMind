@@ -3,11 +3,22 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Sparkles, Menu, X, ArrowRight, LayoutDashboard } from "lucide-react";
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { useAuth, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
 export function Navbar({ onOpenDemoModal }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  let isLoaded = false;
+  let isSignedIn = false;
+  try {
+    const auth = useAuth();
+    isLoaded = Boolean(auth?.isLoaded);
+    isSignedIn = Boolean(auth?.isSignedIn);
+  } catch {
+    isLoaded = false;
+    isSignedIn = false;
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/80 transition-colors">
@@ -38,53 +49,54 @@ export function Navbar({ onOpenDemoModal }) {
           </a>
         </nav>
 
-        {/* Action Buttons with Clerk Auth State */}
+        {/* Action Buttons with Static Sign-In/Up Fallback */}
         <div className="hidden md:flex items-center gap-3">
-          {/* Shown when user is logged out */}
-          <SignedOut>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
-            <Button size="sm" className="gap-1.5 shadow-sm" asChild>
-              <Link href="/sign-up">
-                Get Started
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
-          </SignedOut>
-
-          {/* Shown when user is logged in */}
-          <SignedIn>
-            <Button size="sm" variant="outline" className="gap-1.5" asChild>
-              <Link href="/dashboard">
-                <LayoutDashboard className="w-4 h-4" />
-                Go to Dashboard
-              </Link>
-            </Button>
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: "h-9 w-9",
-                },
-              }}
-            />
-          </SignedIn>
+          {isLoaded && isSignedIn ? (
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                <Link href="/dashboard">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Go to Dashboard
+                </Link>
+              </Button>
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "h-9 w-9",
+                  },
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+              <Button size="sm" className="gap-1.5 shadow-sm" asChild>
+                <Link href="/sign-up">
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Header Right Section */}
         <div className="flex md:hidden items-center gap-2">
-          <SignedOut>
-            <Button variant="ghost" size="sm" asChild className="text-xs px-2.5 h-8">
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
-            <Button size="sm" asChild className="text-xs px-3 h-8 shadow-xs">
-              <Link href="/sign-up">Sign Up</Link>
-            </Button>
-          </SignedOut>
-          <SignedIn>
+          {isLoaded && isSignedIn ? (
             <UserButton afterSignOutUrl="/" />
-          </SignedIn>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild className="text-xs px-2.5 h-8">
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+              <Button size="sm" asChild className="text-xs px-3 h-8 shadow-xs">
+                <Link href="/sign-up">Sign Up</Link>
+              </Button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -131,27 +143,28 @@ export function Navbar({ onOpenDemoModal }) {
           </nav>
 
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
-            <SignedOut>
-              <Button variant="outline" className="w-full justify-center" asChild>
-                <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
-                  Sign In
-                </Link>
-              </Button>
-              <Button className="w-full justify-center gap-1.5" asChild>
-                <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
-                  Get Started Free
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-            </SignedOut>
-            <SignedIn>
+            {isLoaded && isSignedIn ? (
               <Button className="w-full justify-center gap-1.5" asChild>
                 <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                   <LayoutDashboard className="w-4 h-4" />
                   Go to Dashboard
                 </Link>
               </Button>
-            </SignedIn>
+            ) : (
+              <>
+                <Button variant="outline" className="w-full justify-center" asChild>
+                  <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
+                    Sign In
+                  </Link>
+                </Button>
+                <Button className="w-full justify-center gap-1.5" asChild>
+                  <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
+                    Get Started Free
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}

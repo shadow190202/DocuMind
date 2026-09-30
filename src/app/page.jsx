@@ -20,7 +20,7 @@ import {
   FileSearch,
   ExternalLink,
 } from "lucide-react";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,17 @@ export default function HomePage() {
   const [demoDialogOpen, setDemoDialogOpen] = useState(false);
   const [searchDemo, setSearchDemo] = useState("");
   const [selectedFormat, setSelectedFormat] = useState("PDF");
+
+  let isLoaded = false;
+  let isSignedIn = false;
+  try {
+    const auth = useAuth();
+    isLoaded = Boolean(auth?.isLoaded);
+    isSignedIn = Boolean(auth?.isSignedIn);
+  } catch {
+    isLoaded = false;
+    isSignedIn = false;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-x-hidden">
@@ -77,28 +88,28 @@ export default function HomePage() {
 
             {/* CTA Group */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-              <SignedOut>
-                <Button size="lg" className="w-full sm:w-auto gap-2 shadow-md shadow-blue-500/20" asChild>
-                  <Link href="/sign-up">
-                    Get Started Free
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2" asChild>
-                  <Link href="/sign-in">
-                    Sign In to Account
-                  </Link>
-                </Button>
-              </SignedOut>
-
-              <SignedIn>
+              {isLoaded && isSignedIn ? (
                 <Button size="lg" className="w-full sm:w-auto gap-2 shadow-md shadow-blue-500/20" asChild>
                   <Link href="/dashboard">
                     Open Workspace
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
-              </SignedIn>
+              ) : (
+                <>
+                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-md shadow-blue-500/20" asChild>
+                    <Link href="/sign-up">
+                      Get Started Free
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2" asChild>
+                    <Link href="/sign-in">
+                      Sign In to Account
+                    </Link>
+                  </Button>
+                </>
+              )}
 
               <Button
                 variant="outline"
@@ -441,44 +452,46 @@ export default function HomePage() {
               DocuMind empowers you to extract answers, summarize agreements, and compare complex documents with verifiable accuracy.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <SignedOut>
-                <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-blue-500/25" asChild>
-                  <Link href="/sign-up">
-                    Get Started Free
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto gap-2"
-                  asChild
-                >
-                  <Link href="/sign-in">
-                    Sign In to Account
-                  </Link>
-                </Button>
-              </SignedOut>
-
-              <SignedIn>
-                <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-blue-500/25" asChild>
-                  <Link href="/dashboard">
-                    Launch DocuMind Workspace
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto gap-2"
-                  asChild
-                >
-                  <Link href="/documents">
-                    Browse Document Vault
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </SignedIn>
+              {isLoaded && isSignedIn ? (
+                <>
+                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-blue-500/25" asChild>
+                    <Link href="/dashboard">
+                      Launch DocuMind Workspace
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto gap-2"
+                    asChild
+                  >
+                    <Link href="/documents">
+                      Browse Document Vault
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-blue-500/25" asChild>
+                    <Link href="/sign-up">
+                      Get Started Free
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto gap-2"
+                    asChild
+                  >
+                    <Link href="/sign-in">
+                      Sign In to Account
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -558,22 +571,21 @@ export default function HomePage() {
             <DialogClose asChild>
               <Button variant="outline">Close Tour</Button>
             </DialogClose>
-            <SignedOut>
-              <Button size="md" className="gap-1.5 shadow-sm" asChild>
-                <Link href="/sign-up">
-                  Get Started Free
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-            </SignedOut>
-            <SignedIn>
+            {isLoaded && isSignedIn ? (
               <Button size="md" className="gap-1.5 shadow-sm" asChild>
                 <Link href="/dashboard">
                   Explore Workspace
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
-            </SignedIn>
+            ) : (
+              <Button size="md" className="gap-1.5 shadow-sm" asChild>
+                <Link href="/sign-up">
+                  Get Started Free
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

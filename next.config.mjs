@@ -8,12 +8,13 @@ const nextConfig = {
     },
   },
   async rewrites() {
+    if (!process.env.CLERK_PROXY_DESTINATION) {
+      return [];
+    }
     return [
       {
         source: "/__clerk/:path*",
-        destination:
-          process.env.CLERK_PROXY_DESTINATION ||
-          "https://clerk.docu-mind-dun.vercel.app/__clerk/:path*",
+        destination: process.env.CLERK_PROXY_DESTINATION,
       },
     ];
   },
