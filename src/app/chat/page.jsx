@@ -23,6 +23,7 @@ import {
   Edit3,
   Download,
   HardDrive,
+  RefreshCw,
 } from "lucide-react";
 import { RenameModal } from "@/components/conversations/rename-modal";
 import { DeleteModal } from "@/components/conversations/delete-modal";
@@ -38,6 +39,7 @@ function ChatContent() {
   const [selectedDocId, setSelectedDocId] = useState(""); // "" = Entire Vault
 
   const [question, setQuestion] = useState("");
+  const [lastPrompt, setLastPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
   const [error, setError] = useState(null);
@@ -122,6 +124,7 @@ function ChatContent() {
     setMessages([]);
     setError(null);
     setQuestion("");
+    setLastPrompt("");
     setShowExportMenu(false);
   };
 
@@ -130,6 +133,7 @@ function ChatContent() {
     const q = (typeof overrideQ === "string" ? overrideQ : question).trim();
     if (!q || loading) return;
 
+    setLastPrompt(q);
     setQuestion("");
     setError(null);
 
@@ -162,7 +166,10 @@ function ChatContent() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate answer.");
+        const errObj = new Error(data.error || "Failed to generate answer.");
+        errObj.code = data.code;
+        errObj.status = res.status;
+        throw errObj;
       }
 
       // If this was a new conversation, update active conversation state
@@ -190,7 +197,13 @@ function ChatContent() {
       }
     } catch (err) {
       console.error("Chat error:", err);
-      setError(err.message || "Failed to generate answer.");
+      // Remove optimistic message if query failed so conversation remains clean
+      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+      setError({
+        message: err.message || "Failed to generate answer.",
+        code: err.code,
+        status: err.status,
+      });
     } finally {
       setLoading(false);
     }
@@ -526,13 +539,70 @@ function ChatContent() {
               </div>
             )}
 
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div>{error}</div>
-              </div>
-            )}
+            {/* Error Message / High Demand / Rate Limit Banner */}
+            {error && (() => {
+              const errMsg = typeof error === "string" ? error : error.message;
+              const errCode = error?.code;
+              const isHighDemand =
+                errCode === "UPSTREAM_HIGH_DEMAND" ||
+                error?.status === 503 ||
+                errMsg?.toLowerCase().includes("high traffic") ||
+                errMsg?.toLowerCase().includes("high demand") ||
+                errMsg?.toLowerCase().includes("unavailable");
+              const isRateLimit =
+                errCode === "UPSTREAM_RATE_LIMITED" ||
+                error?.status === 429 ||
+                errMsg?.toLowerCase().includes("rate limit");
+
+              const isAmber = isHighDemand || isRateLimit;
+
+              return (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
+                    isAmber
+                      ? "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200"
+                      : "bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle
+                      className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        isAmber
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-red-600 dark:text-red-400"
+                      }`}
+                    />
+                    <div>
+                      <p className="font-semibold text-[13px]">
+                        {isHighDemand
+                          ? "AI Service Temporarily Busy"
+                          : isRateLimit
+                          ? "Rate Limit Reached"
+                          : "Request Failed"}
+                      </p>
+                      <p className="mt-0.5 opacity-90 leading-relaxed">{errMsg}</p>
+                    </div>
+                  </div>
+
+                  {lastPrompt && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAsk(lastPrompt)}
+                      disabled={loading}
+                      className={`shrink-0 text-xs gap-1.5 h-8 font-medium ${
+                        isAmber
+                          ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
+                          : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"
+                      }`}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Retry</span>
+                    </Button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Bottom Chat Input Bar & Tuning Controls */}

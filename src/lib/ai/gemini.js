@@ -28,23 +28,165 @@ export const DEFAULT_EMBEDDING_BATCH_SIZE = parseInt(
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Checks if an error is transient (e.g. rate limit 429, temporary server error 503/500, network drop)
+ * Checks if an error is an upstream 503 / Unavailable / High Demand condition.
  */
-function isTransientError(error) {
+export function isUpstreamUnavailableError(error) {
   if (!error) return false;
   const status = error.status || error.statusCode || error.code;
   const msg = (error.message || "").toLowerCase();
 
-  if (status === 429 || msg.includes("rate limit") || msg.includes("resource_exhausted")) {
+  return (
+    status === 503 ||
+    status === "503" ||
+    status === "UNAVAILABLE" ||
+    msg.includes("503") ||
+    msg.includes("unavailable") ||
+    msg.includes("high demand") ||
+    msg.includes("overloaded")
+  );
+}
+
+/**
+ * Checks if an error is a 429 / Resource Exhausted / Rate Limit condition.
+ */
+export function isUpstreamRateLimitError(error) {
+  if (!error) return false;
+  const status = error.status || error.statusCode || error.code;
+  const msg = (error.message || "").toLowerCase();
+
+  return (
+    status === 429 ||
+    status === "429" ||
+    status === "RESOURCE_EXHAUSTED" ||
+    msg.includes("429") ||
+    msg.includes("rate limit") ||
+    msg.includes("resource_exhausted") ||
+    msg.includes("quota")
+  );
+}
+
+/**
+ * Checks if an error is a transient network or connection drop.
+ */
+export function isTransientNetworkError(error) {
+  if (!error) return false;
+  const msg = (error.message || "").toLowerCase();
+  return (
+    msg.includes("fetch failed") ||
+    msg.includes("econnreset") ||
+    msg.includes("etimedout") ||
+    msg.includes("network error") ||
+    msg.includes("socket hang up")
+  );
+}
+
+/**
+ * Checks if an error is transient (rate limit 429, temporary server error 503/500/502, network drop)
+ */
+export function isTransientError(error) {
+  if (!error) return false;
+  const status = error.status || error.statusCode || error.code;
+  if (isUpstreamRateLimitError(error) || isUpstreamUnavailableError(error) || isTransientNetworkError(error)) {
     return true;
   }
-  if (status === 503 || status === 500 || status === 502) {
-    return true;
-  }
-  if (msg.includes("econnreset") || msg.includes("etimedout") || msg.includes("fetch failed")) {
+  if (status === 500 || status === 502) {
     return true;
   }
   return false;
+}
+
+/**
+ * Error thrown when Google Gemini is experiencing high demand (503).
+ */
+export class UpstreamHighDemandError extends Error {
+  constructor(
+    message = "The AI service is temporarily experiencing high traffic. Please try your request again in a few moments."
+  ) {
+    super(message);
+    this.name = "UpstreamHighDemandError";
+    this.status = 503;
+    this.statusCode = 503;
+    this.code = "UPSTREAM_HIGH_DEMAND";
+    this.isHighDemand = true;
+  }
+}
+
+/**
+ * Error thrown when Google Gemini free-tier rate limit is reached (429).
+ */
+export class UpstreamRateLimitError extends Error {
+  constructor(
+    message = "Rate limit reached. Please wait a moment before sending another request."
+  ) {
+    super(message);
+    this.name = "UpstreamRateLimitError";
+    this.status = 429;
+    this.statusCode = 429;
+    this.code = "UPSTREAM_RATE_LIMITED";
+    this.isRateLimit = true;
+  }
+}
+
+/**
+ * Executes a Gemini AI operation with jittered exponential backoff for transient errors.
+ * Retries on HTTP 503 (high demand), HTTP 429 (rate limits), and transient network failures.
+ *
+ * @param {string} opName - Descriptive operation name for logs
+ * @param {Function} fn - Async operation function () => Promise<T>
+ * @param {Object} [options]
+ * @param {number} [options.maxRetries=2] - Max retries (total attempts = maxRetries + 1)
+ * @param {number} [options.initialDelayMs=1000] - Base delay
+ * @param {number} [options.backoffFactor=2] - Delay multiplier
+ * @param {number} [options.jitterMs=300] - Random jitter window in ms
+ * @returns {Promise<any>}
+ */
+export async function executeWithRetry(opName, fn, options = {}) {
+  const maxRetries = options.maxRetries ?? 2;
+  const initialDelayMs = options.initialDelayMs ?? 1000;
+  const backoffFactor = options.backoffFactor ?? 2;
+  const jitterMs = options.jitterMs ?? 300;
+
+  let delay = initialDelayMs;
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const isUnavailable = isUpstreamUnavailableError(err);
+      const isRateLimit = isUpstreamRateLimitError(err);
+      const isNetwork = isTransientNetworkError(err);
+
+      if ((isUnavailable || isRateLimit || isNetwork) && attempt < maxRetries) {
+        const jitter = Math.floor(Math.random() * jitterMs);
+        const sleepTime = delay + jitter;
+        console.warn(
+          `[Gemini Retry] ${opName} encountered transient error (attempt ${attempt + 1}/${maxRetries + 1}): ${err.message}. Retrying in ${sleepTime}ms...`
+        );
+        await sleep(sleepTime);
+        delay *= backoffFactor;
+        continue;
+      }
+
+      if (isUnavailable) {
+        throw new UpstreamHighDemandError();
+      }
+      if (isRateLimit) {
+        throw new UpstreamRateLimitError();
+      }
+
+      throw err;
+    }
+  }
+
+  if (isUpstreamUnavailableError(lastError)) {
+    throw new UpstreamHighDemandError();
+  }
+  if (isUpstreamRateLimitError(lastError)) {
+    throw new UpstreamRateLimitError();
+  }
+  throw lastError;
 }
 
 /**
@@ -73,45 +215,29 @@ export async function generateEmbedding(text) {
   }
 
   const ai = getGenAIClient();
-  const maxRetries = 3;
-  let delay = 1000;
+  return await executeWithRetry("generateEmbedding", async () => {
+    const response = await ai.models.embedContent({
+      model: EMBEDDING_MODEL,
+      contents: text,
+      config: {
+        outputDimensionality: EXPECTED_DIMENSIONS,
+      },
+    });
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await ai.models.embedContent({
-        model: EMBEDDING_MODEL,
-        contents: text,
-        config: {
-          outputDimensionality: EXPECTED_DIMENSIONS,
-        },
-      });
+    const embeddingValues = response?.embeddings?.[0]?.values;
 
-      const embeddingValues = response?.embeddings?.[0]?.values;
-
-      if (!Array.isArray(embeddingValues)) {
-        throw new Error("Invalid response format from Gemini API: missing embedding values.");
-      }
-
-      if (embeddingValues.length !== EXPECTED_DIMENSIONS) {
-        throw new Error(
-          `Embedding dimension mismatch: expected ${EXPECTED_DIMENSIONS}, got ${embeddingValues.length} from model ${EMBEDDING_MODEL}.`
-        );
-      }
-
-      return embeddingValues;
-    } catch (err) {
-      // Abort immediately on non-transient auth/client errors
-      if (!isTransientError(err) || attempt === maxRetries) {
-        throw new Error(`Gemini embedding generation failed: ${err.message}`);
-      }
-
-      console.warn(
-        `Transient Gemini API error (attempt ${attempt}/${maxRetries}): ${err.message}. Retrying in ${delay}ms...`
-      );
-      await sleep(delay);
-      delay *= 2;
+    if (!Array.isArray(embeddingValues)) {
+      throw new Error("Invalid response format from Gemini API: missing embedding values.");
     }
-  }
+
+    if (embeddingValues.length !== EXPECTED_DIMENSIONS) {
+      throw new Error(
+        `Embedding dimension mismatch: expected ${EXPECTED_DIMENSIONS}, got ${embeddingValues.length} from model ${EMBEDDING_MODEL}.`
+      );
+    }
+
+    return embeddingValues;
+  }, { maxRetries: 2, initialDelayMs: 1000 });
 }
 
 /**
@@ -257,87 +383,52 @@ export async function generateGroundedAnswer({
     conversationHistoryText,
   });
 
-  const maxAttempts = 2; // at most 1 retry on 429
-  let lastError = null;
+  const response = await executeWithRetry("generateGroundedAnswer", async () => {
+    return await ai.models.generateContent({
+      model: CHAT_MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction,
+        temperature: 0.2, // Low temperature for high factual fidelity
+        maxOutputTokens: 2048,
+      },
+    });
+  }, { maxRetries: 2, initialDelayMs: 1200 });
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: CHAT_MODEL,
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.2, // Low temperature for high factual fidelity
-          maxOutputTokens: 2048,
-        },
-      });
-
-      const answer = response?.text?.trim();
-      if (!answer) {
-        throw new Error("Gemini returned an empty response.");
-      }
-
-      // Extract usage metadata if present; do NOT fabricate zero if missing
-      let usage = null;
-      if (
-        response?.usageMetadata &&
-        typeof response.usageMetadata.totalTokenCount === "number"
-      ) {
-        usage = {
-          promptTokens:
-            typeof response.usageMetadata.promptTokenCount === "number"
-              ? response.usageMetadata.promptTokenCount
-              : null,
-          completionTokens:
-            typeof response.usageMetadata.candidatesTokenCount === "number"
-              ? response.usageMetadata.candidatesTokenCount
-              : null,
-          totalTokens: response.usageMetadata.totalTokenCount,
-          unavailable: false,
-        };
-      } else {
-        // Missing metadata: never fabricate token counts or pretend it used 0 tokens
-        usage = {
-          promptTokens: null,
-          completionTokens: null,
-          totalTokens: null,
-          unavailable: true,
-        };
-      }
-
-      return new GroundedAnswerResponse(answer, usage);
-    } catch (err) {
-      lastError = err;
-      const isRateLimit =
-        err?.status === 429 ||
-        err?.statusCode === 429 ||
-        err?.message?.toLowerCase().includes("rate limit") ||
-        err?.message?.toLowerCase().includes("resource_exhausted") ||
-        err?.message?.toLowerCase().includes("quota");
-
-      if (isRateLimit && attempt < maxAttempts) {
-        console.warn(
-          `Gemini rate limit (429) encountered. Waiting 2,000ms before final retry...`
-        );
-        await sleep(2000);
-        continue;
-      }
-
-      if (isRateLimit) {
-        const rateLimitError = new Error(
-          "Gemini free-tier rate limit reached. Please wait a few moments before asking another question."
-        );
-        rateLimitError.isRateLimit = true;
-        rateLimitError.status = 429;
-        throw rateLimitError;
-      }
-
-      // Non-rate-limit errors or final failure
-      throw new Error(`Gemini answer generation failed: ${err.message}`);
-    }
+  const answer = response?.text?.trim();
+  if (!answer) {
+    throw new Error("Gemini returned an empty response.");
   }
 
-  throw lastError;
+  // Extract usage metadata if present; do NOT fabricate zero if missing
+  let usage = null;
+  if (
+    response?.usageMetadata &&
+    typeof response.usageMetadata.totalTokenCount === "number"
+  ) {
+    usage = {
+      promptTokens:
+        typeof response.usageMetadata.promptTokenCount === "number"
+          ? response.usageMetadata.promptTokenCount
+          : null,
+      completionTokens:
+        typeof response.usageMetadata.candidatesTokenCount === "number"
+          ? response.usageMetadata.candidatesTokenCount
+          : null,
+      totalTokens: response.usageMetadata.totalTokenCount,
+      unavailable: false,
+    };
+  } else {
+    // Missing metadata: never fabricate token counts or pretend it used 0 tokens
+    usage = {
+      promptTokens: null,
+      completionTokens: null,
+      totalTokens: null,
+      unavailable: true,
+    };
+  }
+
+  return new GroundedAnswerResponse(answer, usage);
 }
 
 // ============================================================
@@ -412,86 +503,53 @@ export async function callGeminiSummarizer(
   options = {}
 ) {
   const ai = getGenAIClient();
-  const maxAttempts = 2; // at most 1 retry on 429
-  let lastError = null;
   const maxOutputTokens =
     typeof options === "number" ? options : (options?.maxOutputTokens ?? 3000);
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: CHAT_MODEL,
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.2, // Low temperature for high factual fidelity
-          maxOutputTokens,
-        },
-      });
+  const response = await executeWithRetry("callGeminiSummarizer", async () => {
+    return await ai.models.generateContent({
+      model: CHAT_MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction,
+        temperature: 0.2, // Low temperature for high factual fidelity
+        maxOutputTokens,
+      },
+    });
+  }, { maxRetries: 2, initialDelayMs: 1200 });
 
-      const text = response?.text?.trim();
-      if (!text) {
-        throw new Error("Gemini returned an empty response.");
-      }
-
-      let usage = null;
-      if (
-        response?.usageMetadata &&
-        typeof response.usageMetadata.totalTokenCount === "number"
-      ) {
-        usage = {
-          promptTokens:
-            typeof response.usageMetadata.promptTokenCount === "number"
-              ? response.usageMetadata.promptTokenCount
-              : null,
-          completionTokens:
-            typeof response.usageMetadata.candidatesTokenCount === "number"
-              ? response.usageMetadata.candidatesTokenCount
-              : null,
-          totalTokens: response.usageMetadata.totalTokenCount,
-          unavailable: false,
-        };
-      } else {
-        usage = {
-          promptTokens: null,
-          completionTokens: null,
-          totalTokens: null,
-          unavailable: true,
-        };
-      }
-
-      return { text, usage };
-    } catch (err) {
-      lastError = err;
-      const isRateLimit =
-        err?.status === 429 ||
-        err?.statusCode === 429 ||
-        err?.message?.toLowerCase().includes("rate limit") ||
-        err?.message?.toLowerCase().includes("resource_exhausted") ||
-        err?.message?.toLowerCase().includes("quota");
-
-      if (isRateLimit && attempt < maxAttempts) {
-        console.warn(
-          `Gemini rate limit (429) encountered during summarization. Waiting 2,000ms before retry...`
-        );
-        await sleep(2000);
-        continue;
-      }
-
-      if (isRateLimit) {
-        const rateLimitError = new Error(
-          "Gemini free-tier rate limit reached. Please wait a few moments before generating another summary."
-        );
-        rateLimitError.isRateLimit = true;
-        rateLimitError.status = 429;
-        throw rateLimitError;
-      }
-
-      throw new Error(`Gemini summarization failed: ${err.message}`);
-    }
+  const text = response?.text?.trim();
+  if (!text) {
+    throw new Error("Gemini returned an empty response.");
   }
 
-  throw lastError;
+  let usage = null;
+  if (
+    response?.usageMetadata &&
+    typeof response.usageMetadata.totalTokenCount === "number"
+  ) {
+    usage = {
+      promptTokens:
+        typeof response.usageMetadata.promptTokenCount === "number"
+          ? response.usageMetadata.promptTokenCount
+          : null,
+      completionTokens:
+        typeof response.usageMetadata.candidatesTokenCount === "number"
+          ? response.usageMetadata.candidatesTokenCount
+          : null,
+      totalTokens: response.usageMetadata.totalTokenCount,
+      unavailable: false,
+    };
+  } else {
+    usage = {
+      promptTokens: null,
+      completionTokens: null,
+      totalTokens: null,
+      unavailable: true,
+    };
+  }
+
+  return { text, usage };
 }
 
 /**

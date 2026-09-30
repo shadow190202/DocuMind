@@ -85,6 +85,25 @@ export class ServiceUnavailableError extends AppError {
   }
 }
 
+export class UpstreamServiceError extends AppError {
+  constructor(
+    message = "The AI service is temporarily experiencing high traffic. Please try your request again in a few moments.",
+    details = null
+  ) {
+    super(message, 503, "UPSTREAM_HIGH_DEMAND", details);
+  }
+}
+
+export class UpstreamRateLimitError extends AppError {
+  constructor(
+    message = "Rate limit reached. Please wait a moment before sending another request.",
+    retryAfter = 10
+  ) {
+    super(message, 429, "UPSTREAM_RATE_LIMITED", { retryAfter });
+    this.retryAfter = retryAfter;
+  }
+}
+
 /**
  * Scrubs sensitive patterns (database URLs, connection strings, API keys, absolute paths)
  * from log strings.
@@ -114,8 +133,8 @@ export function handleApiError(error, req = null) {
   const url = req?.url ? sanitizeLogString(req.url) : "unknown";
   const method = req?.method || "API";
 
-  // 1. Operational AppErrors with explicit status codes < 500
-  if (error instanceof AppError && error.isOperational && error.statusCode < 500) {
+  // 1. Operational AppErrors with explicit status codes (4xx and operational 503)
+  if (error instanceof AppError && error.isOperational && (error.statusCode < 500 || error.statusCode === 503)) {
     const responsePayload = {
       error: error.message,
       code: error.code,
@@ -128,6 +147,36 @@ export function handleApiError(error, req = null) {
       headers["Retry-After"] = String(error.retryAfter);
     }
     return NextResponse.json(responsePayload, { status: error.statusCode, headers });
+  }
+
+  // 1b. Upstream AI High Demand (503) sanitization
+  if (
+    error?.isHighDemand ||
+    error?.code === "UPSTREAM_HIGH_DEMAND" ||
+    (error?.status === 503 && (error?.message?.toLowerCase().includes("high demand") || error?.message?.toLowerCase().includes("unavailable")))
+  ) {
+    return NextResponse.json(
+      {
+        error: "The AI service is temporarily experiencing high traffic. Please try your request again in a few moments.",
+        code: "UPSTREAM_HIGH_DEMAND",
+      },
+      { status: 503 }
+    );
+  }
+
+  // 1c. Upstream AI Rate Limit (429) sanitization
+  if (
+    error?.isRateLimit ||
+    error?.code === "UPSTREAM_RATE_LIMITED" ||
+    error?.status === 429
+  ) {
+    return NextResponse.json(
+      {
+        error: "Rate limit reached. Please wait a moment before sending another request.",
+        code: "UPSTREAM_RATE_LIMITED",
+      },
+      { status: 429, headers: { "Retry-After": "10" } }
+    );
   }
 
   // 2. Zod validation errors

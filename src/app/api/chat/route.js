@@ -265,13 +265,32 @@ export async function POST(req) {
         conversationHistoryText,
       });
     } catch (aiError) {
-      if (aiError.isRateLimit || aiError.status === 429) {
+      if (
+        aiError.isHighDemand ||
+        aiError.status === 503 ||
+        aiError.code === "UPSTREAM_HIGH_DEMAND"
+      ) {
         return NextResponse.json(
           {
             error:
-              "Gemini free-tier rate limit reached. Please wait a few moments before asking another question.",
+              "The AI service is temporarily experiencing high traffic. Please try your request again in a few moments.",
+            code: "UPSTREAM_HIGH_DEMAND",
           },
-          { status: 429 }
+          { status: 503 }
+        );
+      }
+      if (
+        aiError.isRateLimit ||
+        aiError.status === 429 ||
+        aiError.code === "UPSTREAM_RATE_LIMITED"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Rate limit reached. Please wait a moment before sending another request.",
+            code: "UPSTREAM_RATE_LIMITED",
+          },
+          { status: 429, headers: { "Retry-After": "10" } }
         );
       }
       throw aiError;

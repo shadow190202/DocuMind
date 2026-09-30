@@ -129,7 +129,7 @@ export default function DocumentsPage() {
       );
     } catch (err) {
       console.error("Process error:", err);
-      alert(err.message || "Failed to process document.");
+      setError(err.message || "Failed to process document.");
       setDocs((prev) =>
         prev.map((d) =>
           d.id === docId

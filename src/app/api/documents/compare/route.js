@@ -163,15 +163,44 @@ export async function POST(req) {
       });
     } catch (aiErr) {
       console.error("Gemini document comparison generation error:", aiErr);
-      const isRateLimit = aiErr.isRateLimit || aiErr.status === 429;
+      if (
+        aiErr.isHighDemand ||
+        aiErr.status === 503 ||
+        aiErr.code === "UPSTREAM_HIGH_DEMAND"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "The AI service is temporarily experiencing high traffic. Please try your request again in a few moments.",
+            code: "UPSTREAM_HIGH_DEMAND",
+          },
+          { status: 503 }
+        );
+      }
+      const isRateLimit =
+        aiErr.isRateLimit ||
+        aiErr.status === 429 ||
+        aiErr.code === "UPSTREAM_RATE_LIMITED";
+
+      if (isRateLimit) {
+        return NextResponse.json(
+          {
+            error:
+              "Rate limit reached. Please wait a moment before sending another request.",
+            code: "UPSTREAM_RATE_LIMITED",
+            isRateLimit: true,
+          },
+          { status: 429, headers: { "Retry-After": "10" } }
+        );
+      }
+
       return NextResponse.json(
         {
-          error: isRateLimit
-            ? "Gemini free-tier rate limit reached. Please wait a few moments before trying again."
-            : `AI document comparison failed: ${aiErr.message}`,
-          isRateLimit,
+          error: "AI document comparison failed. Please try again.",
+          code: "COMPARISON_FAILED",
+          details: aiErr.message,
         },
-        { status: isRateLimit ? 429 : 502 }
+        { status: 502 }
       );
     }
 

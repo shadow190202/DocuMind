@@ -177,7 +177,10 @@ export function SummaryTab({ documentId, document }) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate summary.");
+        const errObj = new Error(data.error || "Failed to generate summary.");
+        errObj.code = data.code;
+        errObj.status = res.status;
+        throw errObj;
       }
 
       if (data.summary) {
@@ -193,7 +196,11 @@ export function SummaryTab({ documentId, document }) {
       }
     } catch (err) {
       console.error("Summarization error:", err);
-      setError(err.message || "Failed to generate summary.");
+      setError({
+        message: err.message || "Failed to generate summary.",
+        code: err.code,
+        status: err.status,
+      });
     } finally {
       setGenerating(false);
     }
@@ -256,23 +263,72 @@ export function SummaryTab({ documentId, document }) {
       </div>
 
       {/* Error Alert */}
-      {error && (
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-800 dark:text-red-300">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
-          <div className="flex-1 text-sm">
-            <p className="font-semibold">Summarization Notice</p>
-            <p className="mt-0.5 text-xs md:text-sm text-red-700 dark:text-red-300">{error}</p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleGenerate(false)}
-            className="shrink-0 text-xs border-red-300 dark:border-red-800"
+      {error && (() => {
+        const errMsg = typeof error === "string" ? error : error.message;
+        const errCode = error?.code;
+        const isHighDemand =
+          errCode === "UPSTREAM_HIGH_DEMAND" ||
+          error?.status === 503 ||
+          errMsg?.toLowerCase().includes("high traffic") ||
+          errMsg?.toLowerCase().includes("high demand") ||
+          errMsg?.toLowerCase().includes("unavailable");
+        const isRateLimit =
+          errCode === "UPSTREAM_RATE_LIMITED" ||
+          error?.status === 429 ||
+          errMsg?.toLowerCase().includes("rate limit");
+
+        const isAmber = isHighDemand || isRateLimit;
+
+        return (
+          <div
+            className={`flex items-start gap-3 p-4 rounded-xl border text-sm transition-all shadow-xs ${
+              isAmber
+                ? "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200"
+                : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-800 dark:text-red-300"
+            }`}
           >
-            Retry
-          </Button>
-        </div>
-      )}
+            <AlertCircle
+              className={`w-5 h-5 shrink-0 mt-0.5 ${
+                isAmber
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            />
+            <div className="flex-1">
+              <p className="font-semibold text-sm">
+                {isHighDemand
+                  ? "AI Service Temporarily Busy"
+                  : isRateLimit
+                  ? "Rate Limit Reached"
+                  : "Summarization Notice"}
+              </p>
+              <p
+                className={`mt-0.5 text-xs md:text-sm leading-relaxed ${
+                  isAmber
+                    ? "text-amber-700 dark:text-amber-300"
+                    : "text-red-700 dark:text-red-300"
+                }`}
+              >
+                {errMsg}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleGenerate(false)}
+              disabled={generating}
+              className={`shrink-0 text-xs gap-1.5 h-8 font-medium ${
+                isAmber
+                  ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
+                  : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"
+              }`}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Retry</span>
+            </Button>
+          </div>
+        );
+      })()}
 
       {/* Loading Skeleton */}
       {loading && !activeSummary && (

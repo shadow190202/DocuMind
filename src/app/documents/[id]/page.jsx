@@ -75,6 +75,7 @@ export default function DocumentDetailsPage() {
 
   // AI Q&A State
   const [qaQuestion, setQaQuestion] = useState("");
+  const [lastQaQuestion, setLastQaQuestion] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
   const [qaError, setQaError] = useState(null);
   const [conversationId, setConversationId] = useState(null);
@@ -242,6 +243,7 @@ export default function DocumentDetailsPage() {
     const q = (typeof overrideQuestion === "string" ? overrideQuestion : qaQuestion).trim();
     if (!q || qaLoading) return;
 
+    setLastQaQuestion(q);
     setQaQuestion("");
     setQaError(null);
 
@@ -270,7 +272,10 @@ export default function DocumentDetailsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate answer.");
+        const errObj = new Error(data.error || "Failed to generate answer.");
+        errObj.code = data.code;
+        errObj.status = res.status;
+        throw errObj;
       }
 
       setConversationId(data.conversationId);
@@ -284,7 +289,13 @@ export default function DocumentDetailsPage() {
       setMessagesList((prev) => [...prev, assistantMsg]);
     } catch (err) {
       console.error("Ask question error:", err);
-      setQaError(err.message || "Failed to generate answer.");
+      // Remove optimistic message if query failed so conversation remains clean
+      setMessagesList((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+      setQaError({
+        message: err.message || "Failed to generate answer.",
+        code: err.code,
+        status: err.status,
+      });
     } finally {
       setQaLoading(false);
     }
@@ -1173,12 +1184,69 @@ export default function DocumentDetailsPage() {
                       </div>
 
                       {/* Error Alert */}
-                      {qaError && (
-                        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>{qaError}</span>
-                        </div>
-                      )}
+                      {qaError && (() => {
+                        const errMsg = typeof qaError === "string" ? qaError : qaError.message;
+                        const errCode = qaError?.code;
+                        const isHighDemand =
+                          errCode === "UPSTREAM_HIGH_DEMAND" ||
+                          qaError?.status === 503 ||
+                          errMsg?.toLowerCase().includes("high traffic") ||
+                          errMsg?.toLowerCase().includes("high demand") ||
+                          errMsg?.toLowerCase().includes("unavailable");
+                        const isRateLimit =
+                          errCode === "UPSTREAM_RATE_LIMITED" ||
+                          qaError?.status === 429 ||
+                          errMsg?.toLowerCase().includes("rate limit");
+
+                        const isAmber = isHighDemand || isRateLimit;
+
+                        return (
+                          <div
+                            className={`p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
+                              isAmber
+                                ? "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200"
+                                : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300"
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <AlertCircle
+                                className={`w-4 h-4 shrink-0 mt-0.5 ${
+                                  isAmber
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-red-600 dark:text-red-400"
+                                }`}
+                              />
+                              <div>
+                                <p className="font-semibold text-[13px]">
+                                  {isHighDemand
+                                    ? "AI Service Temporarily Busy"
+                                    : isRateLimit
+                                    ? "Rate Limit Reached"
+                                    : "Query Failed"}
+                                </p>
+                                <p className="mt-0.5 opacity-90 leading-relaxed">{errMsg}</p>
+                              </div>
+                            </div>
+
+                            {lastQaQuestion && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAskQuestion(lastQaQuestion)}
+                                disabled={qaLoading}
+                                className={`shrink-0 text-xs gap-1.5 h-8 font-medium ${
+                                  isAmber
+                                    ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
+                                    : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"
+                                }`}
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                <span>Retry</span>
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Question Input Form */}
                       <form
