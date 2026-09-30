@@ -12,14 +12,21 @@ const nextConfig = {
       process.env.CLERK_FRONTEND_API_URL ||
       process.env.NEXT_PUBLIC_CLERK_FRONTEND_API ||
       process.env.CLERK_PROXY_DESTINATION;
-    if (!clerkFrontendApi) {
+
+    if (!clerkFrontendApi || typeof clerkFrontendApi !== "string") {
       return [];
     }
-    // Clean origin in case user provided trailing slash
-    const origin = clerkFrontendApi.replace(/\/$/, "");
-    const destination = origin.endsWith("/__clerk")
-      ? `${origin}/:path*`
-      : `${origin}/__clerk/:path*`;
+
+    const trimmed = clerkFrontendApi.trim().replace(/\/$/, "");
+
+    // Guard against missing protocol or invalid literal values
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      return [];
+    }
+
+    const destination = trimmed.endsWith("/__clerk")
+      ? `${trimmed}/:path*`
+      : `${trimmed}/__clerk/:path*`;
 
     return [
       {
