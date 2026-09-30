@@ -15,7 +15,7 @@ const nextConfig = {
       "default-src 'self'",
       `script-src ${scriptSrc}`,
       "worker-src 'self' blob:",
-      "connect-src 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://generativelanguage.googleapis.com",
+      "connect-src 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://generativelanguage.googleapis.com https://*.blob.vercel-storage.com https://vercel.com https://blob.vercel-storage.com",
       "img-src 'self' data: blob: https://img.clerk.com https://images.clerk.dev",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
