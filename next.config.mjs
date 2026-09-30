@@ -7,12 +7,20 @@ const nextConfig = {
       "/api/**/*": ["./node_modules/pdfjs-dist/**/*"],
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: "/__clerk/:path*",
+        destination:
+          process.env.CLERK_PROXY_DESTINATION ||
+          "https://clerk.docu-mind-dun.vercel.app/__clerk/:path*",
+      },
+    ];
+  },
   async headers() {
-    const isProd = process.env.NODE_ENV === "production";
-    // In production, omit 'unsafe-eval' for tighter security. In development, allow it for Fast Refresh.
-    const scriptSrc = isProd
-      ? "'self' 'unsafe-inline' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev"
-      : "'self' 'unsafe-eval' 'unsafe-inline' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev";
+    // Clerk client-side authentication SDK requires 'unsafe-eval' for runtime compilation/widgets
+    const scriptSrc =
+      "'self' 'unsafe-inline' 'unsafe-eval' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev";
 
     const cspHeader = [
       "default-src 'self'",
