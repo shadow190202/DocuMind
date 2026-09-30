@@ -174,7 +174,7 @@ export default function UploadPage() {
     <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
 
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
+      <div className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden flex flex-col">
         <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <Button variant="ghost" size="sm" asChild>
@@ -190,15 +190,15 @@ export default function UploadPage() {
           </Badge>
         </header>
 
-        <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full space-y-6">
-          <Card>
+        <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full max-w-full overflow-x-hidden space-y-6">
+          <Card className="max-w-full overflow-hidden">
             <CardHeader>
               <CardTitle>Add New Document</CardTitle>
               <CardDescription>
                 Files are stored securely in your private vault and indexed in PostgreSQL with initial status <code>pending</code>.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 max-w-full overflow-hidden">
               {/* Dropzone Box */}
               <div
                 onDragOver={handleDragOver}
@@ -255,33 +255,34 @@ export default function UploadPage() {
 
               {/* Selected File Stage Box */}
               {selectedFile && !uploadResult && (
-                <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 max-w-full overflow-hidden">
+                  <div className="flex items-center gap-3 min-w-0 max-w-full">
                     <div className="p-2.5 rounded-lg bg-blue-600 text-white shrink-0">
                       <FileText className="w-5 h-5" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100 break-all">
                         {selectedFile.name}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 truncate">
                         {formatFileSize(selectedFile.size)} • Ready for ingestion
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedFile(null);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-800"
+                      className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-800 shrink-0"
+                      aria-label="Remove selected file"
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <Button onClick={handleUpload} disabled={uploading} size="md" className="gap-2 min-w-[140px]">
+                    <Button onClick={handleUpload} disabled={uploading} size="md" className="gap-2 w-full sm:w-auto min-w-[140px] justify-center">
                       {uploading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -300,13 +301,13 @@ export default function UploadPage() {
 
               {/* Success Result Box */}
               {uploadResult && (
-                <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-4">
+                <div className="p-4 sm:p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-4 max-w-full overflow-hidden">
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-emerald-600 text-white shrink-0">
                       <FileCheck className="w-6 h-6" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-200">
+                      <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-200 break-words">
                         Document Uploaded Successfully!
                       </h4>
                       <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
@@ -315,25 +316,26 @@ export default function UploadPage() {
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900 text-xs space-y-1">
-                    <p>
+                  <div className="p-3 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900 text-xs space-y-1.5 break-words max-w-full">
+                    <p className="truncate">
                       <strong className="text-slate-700 dark:text-slate-300">File Name:</strong>{" "}
-                      {uploadResult.filename}
+                      <span className="font-medium text-slate-900 dark:text-slate-100 break-all">{uploadResult.filename}</span>
                     </p>
-                    <p>
+                    <p className="break-all">
                       <strong className="text-slate-700 dark:text-slate-300">Document ID:</strong>{" "}
-                      <span className="font-mono text-[11px]">{uploadResult.id}</span>
+                      <span className="font-mono text-[11px] select-all">{uploadResult.id}</span>
                     </p>
-                    <p>
-                      <strong className="text-slate-700 dark:text-slate-300">Status:</strong>{" "}
-                      <Badge variant="warning" className="text-[10px] ml-1">
+                    <p className="flex items-center gap-1.5 flex-wrap">
+                      <strong className="text-slate-700 dark:text-slate-300">Status:</strong>
+                      <Badge variant="warning" className="text-[10px]">
                         {uploadResult.processingStatus}
                       </Badge>
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button asChild size="md" className="gap-2 shadow-sm">
+                  {/* Responsive action buttons stack */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2">
+                    <Button asChild size="md" className="w-full sm:w-auto justify-center gap-2 shadow-sm">
                       <Link href="/documents">
                         View in Documents
                         <ArrowRight className="w-4 h-4" />
@@ -342,6 +344,7 @@ export default function UploadPage() {
                     <Button
                       variant="outline"
                       size="md"
+                      className="w-full sm:w-auto justify-center"
                       onClick={() => {
                         setUploadResult(null);
                         setSelectedFile(null);
