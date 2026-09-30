@@ -12,6 +12,7 @@ import {
   Search,
   ArrowRight,
   Loader2,
+  Eye,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -207,43 +208,79 @@ export default function DashboardPage() {
                   )}
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="space-y-3">
                   {filteredDocs.slice(0, 5).map((doc) => (
                     <div
                       key={doc.id}
-                      className="py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/50 px-2 rounded-lg transition-colors"
+                      className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 p-3.5 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs space-y-2.5"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 shrink-0">
-                          <FileText className="w-4 h-4" />
+                      {/* Top Tier: Document Info & Status */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 shrink-0 shadow-2xs">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/documents/${doc.id}`}
+                              className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 block transition-colors"
+                            >
+                              {doc.filename}
+                            </Link>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              <span className="uppercase font-mono font-medium">{doc.fileType}</span> •{" "}
+                              {formatFileSize(doc.fileSize)} • {formatDate(doc.createdAt)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100">
-                            {doc.filename}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            <span className="uppercase font-mono">{doc.fileType}</span> •{" "}
-                            {formatFileSize(doc.fileSize)} • {formatDate(doc.createdAt)}
-                          </p>
+
+                        <div className="flex items-center gap-2 pl-9 sm:pl-0 shrink-0">
+                          <Badge
+                            variant={
+                              doc.processingStatus === "completed"
+                                ? "success"
+                                : doc.processingStatus === "failed"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="text-[10px]"
+                          >
+                            {doc.processingStatus}
+                          </Badge>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={
-                            doc.processingStatus === "completed"
-                              ? "success"
-                              : doc.processingStatus === "failed"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                          className="text-[10px]"
-                        >
-                          {doc.processingStatus}
-                        </Badge>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href="/documents">View</Link>
-                        </Button>
+                      {/* Bottom Tier: Full-Width Actions Bar */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                          <span className="text-xs text-slate-400 font-medium mr-1 select-none">
+                            Actions:
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            title="View Document & Extracted Text"
+                          >
+                            <Link href={`/documents/${doc.id}`}>
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            title="Browse all documents in vault"
+                          >
+                            <Link href="/documents">
+                              <span>All Documents</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
