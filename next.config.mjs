@@ -7,17 +7,6 @@ const nextConfig = {
       "/api/**/*": ["./node_modules/pdfjs-dist/**/*"],
     },
   },
-  async rewrites() {
-    if (!process.env.CLERK_PROXY_DESTINATION) {
-      return [];
-    }
-    return [
-      {
-        source: "/__clerk/:path*",
-        destination: process.env.CLERK_PROXY_DESTINATION,
-      },
-    ];
-  },
   async headers() {
     // Clerk client-side authentication SDK requires 'unsafe-eval' for runtime compilation/widgets
     const scriptSrc =
