@@ -234,28 +234,28 @@ export default function DocumentsPage() {
   });
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
+        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">My Documents</h1>
             <Badge variant="outline" className="text-xs">
               {docs.length} {docs.length === 1 ? "File" : "Files"}
             </Badge>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="md"
               onClick={() => setSearchModalOpen(true)}
-              className="gap-2 shadow-sm text-blue-600 dark:text-blue-400"
+              className="gap-2 shadow-sm text-blue-600 dark:text-blue-400 w-full sm:w-auto justify-center"
             >
               <Sparkles className="w-4 h-4" />
               Vault Semantic Search
             </Button>
-            <Button size="md" asChild className="gap-2 shadow-sm">
+            <Button size="md" asChild className="gap-2 shadow-sm w-full sm:w-auto justify-center">
               <Link href="/documents/upload">
                 <Upload className="w-4 h-4" />
                 Upload Document
@@ -264,9 +264,9 @@ export default function DocumentsPage() {
           </div>
         </header>
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardHeader className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <CardTitle>Document Vault</CardTitle>
                 <CardDescription>
@@ -275,7 +275,7 @@ export default function DocumentsPage() {
               </div>
 
               {/* Segmented Filter Tabs */}
-              <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium">
+              <div className="flex items-center flex-wrap gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => setFilterTab("all")}
@@ -318,7 +318,7 @@ export default function DocumentsPage() {
                   placeholder="Filter by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-xs"
+                  className="pl-9 h-9 text-xs w-full"
                 />
               </div>
             </CardHeader>
@@ -376,7 +376,7 @@ export default function DocumentsPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <Link
                                 href={`/documents/${doc.id}`}
-                                className="font-semibold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-sm sm:max-w-md text-sm transition-colors"
+                                className="font-semibold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[200px] sm:max-w-md text-sm transition-colors"
                               >
                                 {doc.filename}
                               </Link>

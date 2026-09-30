@@ -53,15 +53,15 @@ export default function AdminSystemPage() {
   const tableCounts = data?.tableRowCounts || {};
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
         <AdminHeader
           title="System Health & Infrastructure Diagnostics"
           subtitle="Operational diagnostics, database latency, pgvector extension, and storage statistics"
         />
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">

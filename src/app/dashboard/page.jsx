@@ -66,15 +66,15 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
         {/* Top Header */}
-        <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Workspace Dashboard
             </h1>
@@ -84,11 +84,11 @@ export default function DashboardPage() {
             </Badge>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" asChild>
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-initial justify-center">
               <Link href="/">Landing Page</Link>
             </Button>
-            <Button size="md" className="gap-2 shadow-sm" asChild>
+            <Button size="md" className="gap-2 shadow-sm flex-1 sm:flex-initial justify-center" asChild>
               <Link href="/documents/upload">
                 <Upload className="w-4 h-4" />
                 Upload Document
@@ -98,7 +98,7 @@ export default function DashboardPage() {
         </header>
 
         {/* Dashboard Body */}
-        <div className="p-6 md:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl w-full mx-auto">
           {/* Welcome Banner */}
           <div className="rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 sm:p-8 text-white shadow-md">
             <div className="max-w-2xl space-y-2">

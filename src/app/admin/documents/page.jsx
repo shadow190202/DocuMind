@@ -135,15 +135,15 @@ export default function AdminDocumentsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
         <AdminHeader
           title="Global Document Repository"
           subtitle="Surveillance across all tenant documents with administrative reprocessing and deletion"
         />
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           {error && (
             <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />

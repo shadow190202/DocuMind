@@ -249,12 +249,12 @@ function ChatContent() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       {/* Universal Sidebar */}
       <Sidebar />
 
       {/* Main Chat Interface */}
-      <div className="flex-1 flex min-w-0 overflow-hidden">
+      <div className="flex-1 flex min-w-0 w-full overflow-hidden">
         {/* Left Sub-Sidebar: Conversations Thread List */}
         <div className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 hidden md:flex">
           {/* Action Header */}

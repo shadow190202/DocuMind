@@ -32,9 +32,9 @@ export function AdminHeader({ title = "Admin Console", subtitle }) {
   return (
     <header className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
       {/* Top Banner */}
-      <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/60">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <ShieldAlert className="w-4 h-4" />
           </div>
           <div>
@@ -66,7 +66,7 @@ export function AdminHeader({ title = "Admin Console", subtitle }) {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="px-6 flex items-center gap-1 overflow-x-auto scrollbar-none py-1">
+      <div className="px-4 sm:px-6 flex items-center gap-1 overflow-x-auto scrollbar-none py-1">
         {adminTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = pathname === tab.href;

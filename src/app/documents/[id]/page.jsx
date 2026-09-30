@@ -372,12 +372,12 @@ export default function DocumentDetailsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
         {/* Navigation Bar */}
-        <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between">
+        <header className="min-h-16 h-auto py-2.5 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-slate-600 dark:text-slate-400">
               <Link href="/documents">
@@ -459,7 +459,7 @@ export default function DocumentDetailsPage() {
         </header>
 
         {/* Content Area */}
-        <div className="p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
           {loading ? (
             <div className="py-24 text-center space-y-3">
               <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" />

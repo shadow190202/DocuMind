@@ -59,15 +59,15 @@ export default function AdminDashboardPage() {
   const charts = data?.charts;
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
         <AdminHeader
           title="Admin Overview & Telemetry"
           subtitle="Real-time system metrics, AI operations, and platform health"
         />
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           {/* Controls & Time Range Filter */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>

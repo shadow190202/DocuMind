@@ -132,14 +132,14 @@ export default function ConversationsPage() {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       {/* Universal Sidebar */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
         {/* Header */}
-        <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between">
+        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
               <History className="w-5 h-5" />
@@ -163,7 +163,7 @@ export default function ConversationsPage() {
         </header>
 
         {/* Dashboard Body */}
-        <div className="p-6 md:p-8 space-y-6 max-w-7xl w-full mx-auto">
+        <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl w-full mx-auto">
           {/* Filter & Controls Toolbar */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
