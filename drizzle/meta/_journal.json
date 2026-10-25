@@ -57,6 +57,13 @@
       "when": 1790250000000,
       "tag": "0007_add_admin_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792928893562,
+      "tag": "0008_add_documents_expires_at",
+      "breakpoints": true
     }
   ]
 }
