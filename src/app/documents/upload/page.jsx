@@ -110,6 +110,7 @@ export default function UploadPage() {
         const blob = await upload(selectedFile.name, selectedFile, {
           access: "private",
           handleUploadUrl: "/api/documents/upload",
+          addRandomSuffix: true,
           clientPayload: JSON.stringify({
             filename: selectedFile.name,
             size: selectedFile.size,

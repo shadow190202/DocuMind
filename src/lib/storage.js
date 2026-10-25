@@ -111,7 +111,8 @@ export async function saveFile(buffer, originalFilename, userId) {
     const blobPath = `documents/${sanitizedUserId}/${uniqueFileName}`;
     const blob = await put(blobPath, buffer, {
       access: "private",
-      addRandomSuffix: false,
+      addRandomSuffix: true,
+      allowOverwrite: true,
     });
 
     return {

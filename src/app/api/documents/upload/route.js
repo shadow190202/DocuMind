@@ -232,6 +232,8 @@ export async function POST(req) {
                 "application/csv",
               ],
               maximumSizeInBytes: 20 * 1024 * 1024,
+              addRandomSuffix: true,
+              allowOverwrite: true,
               tokenPayload: JSON.stringify({
                 userId,
                 filename,
