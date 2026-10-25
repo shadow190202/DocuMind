@@ -50,11 +50,11 @@ export async function getOrCreateCurrentUser(req = null) {
     const existing = await db
       .select()
       .from(users)
-      .where(eq(users.id, clerkUser.id));
+      .where(eq(users.id, id));
 
     if (existing.length === 0) {
       await db.insert(users).values({
-        id: clerkUser.id,
+        id,
         email,
         name,
         role: userRole,
@@ -65,7 +65,7 @@ export async function getOrCreateCurrentUser(req = null) {
   }
 
   return {
-    id: clerkUser.id,
+    id,
     email,
     name,
     role: userRole,

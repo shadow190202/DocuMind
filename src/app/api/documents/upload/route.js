@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth/session";
 import { db } from "@/db";
-import { documents } from "@/db/schema";
+import { documents, users } from "@/db/schema";
 import { saveFile } from "@/lib/storage";
 import { getOrCreateCurrentUser } from "@/lib/auth-user";
 import {
@@ -249,6 +249,22 @@ export async function POST(req) {
               const { userId, filename, fileSize, fileType } = data || {};
               if (!db || !userId) return;
 
+              // Ensure user record exists in PostgreSQL to satisfy foreign key constraint
+              const userExists = await db
+                .select({ id: users.id })
+                .from(users)
+                .where(eq(users.id, userId))
+                .limit(1);
+
+              if (userExists.length === 0) {
+                await db.insert(users).values({
+                  id: userId,
+                  email: `${userId}@documind.local`,
+                  name: "DocuMind User",
+                  role: "user",
+                });
+              }
+
               const existing = await db
                 .select({ id: documents.id })
                 .from(documents)
@@ -256,11 +272,15 @@ export async function POST(req) {
                 .limit(1);
 
               if (existing.length === 0) {
+                const docName = filename || "untitled";
+                const normType = fileType || getNormalizedFileType(docName, "") || "txt";
+                const sizeInBytes = typeof fileSize === "number" ? Math.round(fileSize) : parseInt(fileSize, 10) || 0;
+
                 await db.insert(documents).values({
                   userId,
-                  filename: filename || "untitled",
-                  fileType: fileType || "txt",
-                  fileSize: fileSize || 0,
+                  filename: docName,
+                  fileType: normType,
+                  fileSize: sizeInBytes,
                   storageUrl: blob.url,
                   processingStatus: "pending",
                 });
