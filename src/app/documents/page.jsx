@@ -268,8 +268,11 @@ export default function DocumentsPage() {
             <CardHeader className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <CardTitle>Document Vault</CardTitle>
-                <CardDescription>
-                  Your document repository backed by PostgreSQL.
+                <CardDescription className="flex items-center gap-2 flex-wrap">
+                  <span>Your document repository backed by PostgreSQL.</span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 font-normal">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> 3-hr retention
+                  </span>
                 </CardDescription>
               </div>
 
@@ -421,6 +424,9 @@ export default function DocumentsPage() {
                           <div>{getStatusBadge(doc.processingStatus)}</div>
                           <span className="text-slate-400 dark:text-slate-500">
                             {formatDate(doc.createdAt)}
+                          </span>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> 3-hr retention
                           </span>
                         </div>
                       </div>

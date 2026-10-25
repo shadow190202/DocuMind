@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   UploadCloud,
   FileText,
+  Clock,
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
@@ -199,6 +200,12 @@ export default function UploadPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 max-w-full overflow-hidden">
+              {/* 3-Hour Storage Notice Banner */}
+              <div className="flex items-center gap-2.5 p-3.5 text-sm text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-md">
+                <Clock className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400"/>
+                <span><strong>Storage Notice:</strong> Uploaded documents remain in secure storage for 3 hours before automatic expiration and deletion.</span>
+              </div>
+
               {/* Dropzone Box */}
               <div
                 onDragOver={handleDragOver}

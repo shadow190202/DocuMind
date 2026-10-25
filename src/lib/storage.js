@@ -328,3 +328,59 @@ export async function deleteExtractedData(documentId, userId) {
 
   return deleted;
 }
+
+/**
+ * Automatically cleans up expired documents based on their 3-hour retention lifecycle.
+ * Queries PostgreSQL for records where expiresAt <= NOW(), purges physical blobs from
+ * Vercel Blob / local storage, deletes extracted JSON, and deletes the document record (cascading in DB).
+ *
+ * @param {Date} [referenceTime=new Date()]
+ * @returns {Promise<{ cleanedCount: number, errors: Array<{ id: string, error: string }> }>}
+ */
+export async function cleanupExpiredDocuments(referenceTime = new Date()) {
+  const { db } = await import("@/db");
+  const { documents } = await import("@/db/schema");
+  const { lte, eq } = await import("drizzle-orm");
+
+  if (!db) {
+    return { cleanedCount: 0, errors: [] };
+  }
+
+  const expiredDocs = await db
+    .select({
+      id: documents.id,
+      userId: documents.userId,
+      storageUrl: documents.storageUrl,
+      expiresAt: documents.expiresAt,
+    })
+    .from(documents)
+    .where(lte(documents.expiresAt, referenceTime));
+
+  let cleanedCount = 0;
+  const errors = [];
+
+  for (const doc of expiredDocs) {
+    try {
+      if (doc.storageUrl) {
+        if (doc.storageUrl.startsWith("http://") || doc.storageUrl.startsWith("https://")) {
+          try {
+            await del(doc.storageUrl);
+          } catch (delErr) {
+            console.error(`Failed to delete blob from Vercel storage for doc ${doc.id}:`, delErr.message);
+          }
+        } else {
+          await deleteFile(doc.storageUrl);
+        }
+      }
+
+      await deleteExtractedData(doc.id, doc.userId);
+      await db.delete(documents).where(eq(documents.id, doc.id));
+      cleanedCount++;
+    } catch (err) {
+      console.error(`Failed to cleanup expired document ${doc.id}:`, err);
+      errors.push({ id: doc.id, error: err.message });
+    }
+  }
+
+  return { cleanedCount, errors };
+}

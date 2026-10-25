@@ -9,7 +9,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ============================================================
 // 1. USERS TABLE (Linked to Clerk Authentication)
@@ -45,12 +45,16 @@ export const documents = pgTable(
     storageUrl: text("storage_url").notNull(),
     processingStatus: text("processing_status").default("pending").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
     errorMessage: text("error_message"),
+    expiresAt: timestamp("expires_at", { withTimezone: true })
+      .default(sql`NOW() + INTERVAL '3 hours'`)
+      .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
     index("documents_status_created_idx").on(table.processingStatus, table.createdAt),
     index("documents_created_idx").on(table.createdAt),
+    index("documents_expires_at_idx").on(table.expiresAt),
   ]
 );
 
