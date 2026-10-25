@@ -5,25 +5,11 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/cron/cleanup
- * Automated cron endpoint triggered hourly by Vercel Cron.
+ * Automated cleanup endpoint triggered hourly by Vercel Cron.
  * Purges documents whose 3-hour retention lifecycle has elapsed.
  */
-export async function GET(req) {
+export async function GET() {
   try {
-    // Authenticate cron trigger via CRON_SECRET if configured or running in production
-    const isProd = process.env.NODE_ENV === "production";
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret || isProd) {
-      const authHeader = req.headers.get("authorization");
-      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json(
-          { error: "Unauthorized: Invalid or missing cron secret." },
-          { status: 401 }
-        );
-      }
-    }
-
     const startTime = Date.now();
     const result = await cleanupExpiredDocuments();
     const durationMs = Date.now() - startTime;
