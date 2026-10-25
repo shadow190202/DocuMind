@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   "/privacy(.*)",
   "/api/health",
   "/api/webhooks(.*)",
+  "/api/cron(.*)",
 ]);
 
 // Define administrative routes for role check foundation
