@@ -19,6 +19,7 @@ export function toClientSafeDocument(doc, roleInfo = {}) {
     fileSize: doc.fileSize,
     processingStatus: doc.processingStatus,
     errorMessage: doc.errorMessage || null,
+    expiresAt: doc.expiresAt || null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     role: roleInfo.role || (doc.userId === roleInfo.userId ? "owner" : doc.sharedPermission || "read"),

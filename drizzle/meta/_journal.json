@@ -64,6 +64,13 @@
       "when": 1792928893562,
       "tag": "0008_add_documents_expires_at",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792930875106,
+      "tag": "0009_foamy_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

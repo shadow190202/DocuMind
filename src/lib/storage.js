@@ -330,7 +330,7 @@ export async function deleteExtractedData(documentId, userId) {
 }
 
 /**
- * Automatically cleans up expired documents based on their 3-hour retention lifecycle.
+ * Automatically cleans up expired documents based on their 24-hour retention lifecycle.
  * Queries PostgreSQL for records where expiresAt <= NOW(), purges physical blobs from
  * Vercel Blob / local storage, deletes extracted JSON, and deletes the document record (cascading in DB).
  *

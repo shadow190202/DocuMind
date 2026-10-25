@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/cron/cleanup
  * Automated cleanup endpoint triggered hourly by Vercel Cron.
- * Purges documents whose 3-hour retention lifecycle has elapsed.
+ * Purges documents whose 24-hour retention lifecycle has elapsed.
  */
 export async function GET() {
   try {

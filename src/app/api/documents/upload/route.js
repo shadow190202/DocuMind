@@ -150,7 +150,7 @@ export async function POST(req) {
               fileSize,
               storageUrl: blobUrl,
               processingStatus: "pending",
-              expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
             })
             .returning();
           insertedDoc = newDoc;
@@ -284,7 +284,7 @@ export async function POST(req) {
                   fileSize: sizeInBytes,
                   storageUrl: blob.url,
                   processingStatus: "pending",
-                  expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+                  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
                 });
               }
             } catch (err) {
@@ -397,7 +397,7 @@ export async function POST(req) {
         fileSize,
         storageUrl,
         processingStatus: "pending",
-        expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       })
       .returning();
 

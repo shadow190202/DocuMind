@@ -23,6 +23,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatExpirationCountdown } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -161,8 +162,25 @@ export default function DocumentsPage() {
     }
   };
 
+  const [, setTicker] = useState(0);
+
   useEffect(() => {
     fetchDocuments();
+
+    // Auto-refresh document list every 30 seconds to synchronize with storage cleanup
+    const syncInterval = setInterval(() => {
+      fetchDocuments();
+    }, 30000);
+
+    // Update countdown timers every 15 seconds
+    const tickInterval = setInterval(() => {
+      setTicker((t) => t + 1);
+    }, 15000);
+
+    return () => {
+      clearInterval(syncInterval);
+      clearInterval(tickInterval);
+    };
   }, []);
 
   const handleDelete = async () => {
@@ -271,7 +289,7 @@ export default function DocumentsPage() {
                 <CardDescription className="flex items-center gap-2 flex-wrap">
                   <span>Your document repository backed by PostgreSQL.</span>
                   <span className="text-xs text-muted-foreground flex items-center gap-1 font-normal">
-                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> 3-hr retention
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> 24-hr retention
                   </span>
                 </CardDescription>
               </div>
@@ -425,9 +443,36 @@ export default function DocumentsPage() {
                           <span className="text-slate-400 dark:text-slate-500">
                             {formatDate(doc.createdAt)}
                           </span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> 3-hr retention
-                          </span>
+                          {(() => {
+                            const countdown = formatExpirationCountdown(doc.expiresAt, doc.createdAt);
+                            return (
+                              <span
+                                className={`text-xs flex items-center gap-1 font-medium ${
+                                  countdown.isExpired
+                                    ? "text-rose-600 dark:text-rose-400"
+                                    : countdown.isExpiringSoon
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-slate-500 dark:text-slate-400"
+                                }`}
+                                title={
+                                  countdown.isExpired
+                                    ? "This document has expired and will be automatically purged"
+                                    : `Automatic deletion scheduled in ${countdown.label}`
+                                }
+                              >
+                                <Clock
+                                  className={`w-3.5 h-3.5 ${
+                                    countdown.isExpired
+                                      ? "text-rose-500"
+                                      : countdown.isExpiringSoon
+                                      ? "text-amber-500 animate-pulse"
+                                      : "text-amber-600 dark:text-amber-400"
+                                  }`}
+                                />
+                                {countdown.label}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 

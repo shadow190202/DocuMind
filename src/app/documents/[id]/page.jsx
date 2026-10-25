@@ -28,11 +28,13 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  Upload,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatExpirationCountdown } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -117,10 +119,25 @@ export default function DocumentDetailsPage() {
     }
   };
 
+  const [, setTicker] = useState(0);
+
   useEffect(() => {
     if (documentId) {
       fetchData();
       fetchDocumentConversation();
+
+      const pollInterval = setInterval(() => {
+        fetchData();
+      }, 30000);
+
+      const tickInterval = setInterval(() => {
+        setTicker((t) => t + 1);
+      }, 15000);
+
+      return () => {
+        clearInterval(pollInterval);
+        clearInterval(tickInterval);
+      };
     }
   }, [documentId]);
 
@@ -406,6 +423,24 @@ export default function DocumentDetailsPage() {
                   </Badge>
                 )
               )}
+              {document && (() => {
+                const countdown = formatExpirationCountdown(document.expiresAt, document.createdAt);
+                return (
+                  <span
+                    className={`text-xs hidden sm:flex items-center gap-1 font-medium ml-1.5 ${
+                      countdown.isExpired
+                        ? "text-rose-600 dark:text-rose-400"
+                        : countdown.isExpiringSoon
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                    title={countdown.isExpired ? "This document has expired" : `Automatic deletion scheduled in ${countdown.label}`}
+                  >
+                    <Clock className={`w-3.5 h-3.5 ${countdown.isExpired ? "text-rose-500" : countdown.isExpiringSoon ? "text-amber-500 animate-pulse" : "text-amber-600 dark:text-amber-400"}`} />
+                    {countdown.label}
+                  </span>
+                );
+              })()}
             </div>
           </div>
 
@@ -465,17 +500,34 @@ export default function DocumentDetailsPage() {
               <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" />
               <p className="text-xs text-slate-500">Loading document intelligence...</p>
             </div>
-          ) : error ? (
-            <div className="p-5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-sm flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-semibold">Document Error</p>
-                <p className="text-xs opacity-90">{error}</p>
-                <Button size="sm" variant="outline" onClick={handleProcess} className="mt-2 text-xs">
-                  Retry Extraction
+          ) : error || !document ? (
+            <Card className="p-8 text-center max-w-lg mx-auto space-y-4 border-slate-200 dark:border-slate-800">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Document Unavailable or Expired
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  This document may have exceeded its 24-hour retention lifecycle and been automatically purged, or you may not have permission to view it.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/documents">
+                    <ArrowLeft className="w-4 h-4 mr-1.5" />
+                    Back to Vault
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/documents/upload">
+                    <Upload className="w-4 h-4 mr-1.5" />
+                    Upload New File
+                  </Link>
                 </Button>
               </div>
-            </div>
+            </Card>
           ) : (
             <>
               {/* Document Overview Metadata Card */}
@@ -497,7 +549,7 @@ export default function DocumentDetailsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div className="space-y-1">
                       <span className="text-slate-400 flex items-center gap-1.5">
                         <HardDrive className="w-3.5 h-3.5" /> File Size
@@ -544,6 +596,15 @@ export default function DocumentDetailsPage() {
                         {chunksData?.totalChunks !== undefined
                           ? `${chunksData.totalChunks} Chunks`
                           : "—"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-slate-400 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" /> Retention
+                      </span>
+                      <p className="font-medium text-slate-800 dark:text-slate-200">
+                        {formatExpirationCountdown(document?.expiresAt, document?.createdAt).label}
                       </p>
                     </div>
                   </div>
