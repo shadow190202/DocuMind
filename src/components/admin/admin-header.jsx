@@ -8,7 +8,7 @@ import {
   Users,
   FileText,
   Cpu,
-  Sparkles,
+  Activity,
   Server,
   ArrowLeft,
   ShieldAlert,
@@ -22,7 +22,7 @@ const adminTabs = [
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Documents", href: "/admin/documents", icon: FileText },
   { label: "Processing Monitor", href: "/admin/processing", icon: Cpu },
-  { label: "AI Usage", href: "/admin/usage", icon: Sparkles },
+  { label: "AI Usage", href: "/admin/usage", icon: Activity },
   { label: "System Health", href: "/admin/system", icon: Server },
 ];
 

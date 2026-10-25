@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   MessageSquare,
-  Sparkles,
+  Terminal,
   Send,
   Bot,
   User,
@@ -333,7 +333,7 @@ function ChatContent() {
           <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 truncate min-w-0">
               <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4 h-4" />
+                <MessageSquare className="w-4 h-4" />
               </div>
               <div className="truncate min-w-0">
                 <div className="flex items-center gap-2">
@@ -445,7 +445,7 @@ function ChatContent() {
                       className="p-3 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-600 transition-colors shadow-sm text-left flex items-center justify-between"
                     >
                       <span className="truncate">{starter}</span>
-                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-blue-500 ml-2" />
+                      <Terminal className="w-3.5 h-3.5 shrink-0 text-blue-500 ml-2" />
                     </button>
                   ))}
                 </div>

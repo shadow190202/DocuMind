@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Sparkles,
+  ListFilter,
   RefreshCw,
   Copy,
   Check,
@@ -36,7 +36,7 @@ const SUMMARY_DIMENSIONS = [
   {
     id: "executive",
     label: "Executive",
-    icon: Sparkles,
+    icon: FileText,
     title: "Executive Summary",
     description: "High-level 150–250 word synthesis capturing the core thesis, key findings, and bottom-line conclusions.",
   },
@@ -348,7 +348,7 @@ export function SummaryTab({ documentId, document }) {
           <CardContent className="py-16 text-center space-y-3">
             <div className="relative inline-flex">
               <div className="w-12 h-12 rounded-full border-2 border-blue-500/20 border-t-blue-600 animate-spin mx-auto" />
-              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Synthesizing {activeDimension.title}
@@ -385,7 +385,7 @@ export function SummaryTab({ documentId, document }) {
                 onClick={() => handleGenerate(false)}
                 className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
               >
-                <Sparkles className="w-4 h-4 mr-2" />
+                <FileText className="w-4 h-4 mr-2" />
                 Generate {activeDimension.label} Summary
               </Button>
             )}

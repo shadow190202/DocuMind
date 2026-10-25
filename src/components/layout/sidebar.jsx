@@ -12,7 +12,7 @@ import {
   GitCompare,
   User,
   Shield,
-  Sparkles,
+  Activity,
   ChevronLeft,
   ChevronRight,
   HardDrive,
@@ -28,7 +28,7 @@ const navigationItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Upload Document", href: "/documents/upload", icon: Upload },
-  { label: "AI Chat & Q&A", href: "/chat", icon: MessageSquare },
+  { label: "Grounded Q&A", href: "/chat", icon: MessageSquare },
   { label: "Conversations", href: "/conversations", icon: History },
   { label: "Compare Documents", href: "/compare", icon: GitCompare },
   { label: "Profile", href: "/profile", icon: User },
@@ -156,8 +156,8 @@ export function Sidebar({ className }) {
             <Menu className="w-5 h-5" />
           </button>
           <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xs">
-              <Sparkles className="w-4 h-4" />
+            <div className="h-8 w-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+              <FileText className="w-4 h-4" />
             </div>
             <span className="font-bold text-base tracking-tight text-slate-900 dark:text-slate-100">
               Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>
@@ -182,8 +182,8 @@ export function Sidebar({ className }) {
         {/* Sidebar Header */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
           <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/30">
-              <Sparkles className="w-5 h-5" />
+            <div className="h-9 w-9 shrink-0 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+              <FileText className="w-5 h-5" />
             </div>
             {!collapsed && (
               <span className="font-bold text-lg tracking-tight truncate text-slate-900 dark:text-slate-100">
@@ -295,22 +295,22 @@ export function Sidebar({ className }) {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
               <div className="flex items-center justify-between font-medium">
                 <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                  AI Usage
+                  <Activity className="w-3.5 h-3.5 text-blue-500" />
+                  Token Usage
                 </span>
                 <span
                   className="text-slate-500 cursor-default"
                   title={`Chat Questions: ${aiUsage.chatQuestionsCount ?? 0}, Summaries: ${aiUsage.summariesCount ?? 0}, Comparisons: ${aiUsage.comparisonsCount ?? 0}`}
                 >
                   {requestsCount === 1
-                    ? "1 AI request"
-                    : `${requestsCount.toLocaleString()} AI requests`}
+                    ? "1 request"
+                    : `${requestsCount.toLocaleString()} requests`}
                 </span>
               </div>
 
               <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-500"
+                  className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500"
                   style={{ width: `${activityFill}%` }}
                 />
               </div>
@@ -321,8 +321,9 @@ export function Sidebar({ className }) {
                 </span>
               </div>
 
-              <p className="text-[9.5px] leading-tight text-slate-400">
-                ⓘ Usage tracked by DocuMind. Provider-side quota may differ.
+              <p className="text-[9.5px] leading-tight text-slate-400 flex items-center">
+                <Info className="w-3.5 h-3.5 inline-block mr-1 shrink-0" />
+                Usage tracked by DocuMind. Provider-side quota may differ.
               </p>
             </div>
           </div>
@@ -336,10 +337,10 @@ export function Sidebar({ className }) {
               <HardDrive className="w-5 h-5 text-blue-500" />
             </div>
             <div
-              title={`AI Usage: ${requestsCount} AI requests, ${aiUsage.totalTokens.toLocaleString()} tokens used. Usage tracked by DocuMind. Provider-side quota may differ.`}
+              title={`Token Usage: ${requestsCount} requests, ${aiUsage.totalTokens.toLocaleString()} tokens used. Usage tracked by DocuMind. Provider-side quota may differ.`}
               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-default"
             >
-              <Sparkles className="w-5 h-5 text-indigo-500" />
+              <Activity className="w-5 h-5 text-blue-500" />
             </div>
           </div>
         )}
@@ -378,8 +379,8 @@ export function Sidebar({ className }) {
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2.5 overflow-hidden"
               >
-                <div className="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/30">
-                  <Sparkles className="w-5 h-5" />
+                <div className="h-9 w-9 shrink-0 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+                  <FileText className="w-5 h-5" />
                 </div>
                 <span className="font-bold text-lg tracking-tight truncate text-slate-900 dark:text-slate-100">
                   Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>
@@ -481,22 +482,22 @@ export function Sidebar({ className }) {
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
                 <div className="flex items-center justify-between font-medium">
                   <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                    AI Usage
+                    <Activity className="w-3.5 h-3.5 text-blue-500" />
+                    Token Usage
                   </span>
                   <span
                     className="text-slate-500 cursor-default"
                     title={`Chat Questions: ${aiUsage.chatQuestionsCount ?? 0}, Summaries: ${aiUsage.summariesCount ?? 0}, Comparisons: ${aiUsage.comparisonsCount ?? 0}`}
                   >
                     {requestsCount === 1
-                      ? "1 AI request"
-                      : `${requestsCount.toLocaleString()} AI requests`}
+                      ? "1 request"
+                      : `${requestsCount.toLocaleString()} requests`}
                   </span>
                 </div>
 
                 <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-500"
+                    className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500"
                     style={{ width: `${activityFill}%` }}
                   />
                 </div>
@@ -507,8 +508,9 @@ export function Sidebar({ className }) {
                   </span>
                 </div>
 
-                <p className="text-[9.5px] leading-tight text-slate-400">
-                  ⓘ Usage tracked by DocuMind. Provider-side quota may differ.
+                <p className="text-[9.5px] leading-tight text-slate-400 flex items-center">
+                  <Info className="w-3.5 h-3.5 inline-block mr-1 shrink-0" />
+                  Usage tracked by DocuMind. Provider-side quota may differ.
                 </p>
               </div>
             </div>

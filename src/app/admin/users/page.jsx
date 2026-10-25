@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
-import { Search, Shield, User, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
+import { Search, Shield, User, RefreshCw, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useUser } from "@clerk/nextjs";
@@ -248,8 +248,11 @@ export default function AdminUsersPage() {
               </div>
 
               {currentClerkUser?.id === roleModalUser.id && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] text-amber-800 dark:text-amber-300">
-                  ⚠️ <strong>Self-Demotion Disabled:</strong> You cannot remove your own administrator privileges. Another administrator must perform this action.
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] text-amber-800 dark:text-amber-300 flex items-start">
+                  <AlertTriangle className="w-4 h-4 inline-block mr-1.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div>
+                    <strong>Self-Demotion Disabled:</strong> You cannot remove your own administrator privileges. Another administrator must perform this action.
+                  </div>
                 </div>
               )}
 

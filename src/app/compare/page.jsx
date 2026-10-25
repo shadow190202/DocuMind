@@ -36,9 +36,9 @@ export default function ComparePage() {
           </div>
           <Badge
             variant="secondary"
-            className="bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-[11px] font-medium shrink-0"
+            className="text-[11px] font-medium shrink-0"
           >
-            Comparative AI
+            Document Diff Engine
           </Badge>
         </header>
 

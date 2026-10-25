@@ -14,7 +14,7 @@ import {
   Users,
   FileText,
   MessageSquare,
-  Sparkles,
+  Activity,
   HardDrive,
   AlertTriangle,
   ArrowRight,
@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
                     : `${(kpis.aiUsage.recordedTokens / 1000).toFixed(1)}k`
                   : "..."
               }
-              icon={Sparkles}
+              icon={Activity}
               subtext={`${kpis?.aiUsage.operationsCount ?? 0} total AI operations`}
               badgeText="Free Tier"
               badgeVariant="default"

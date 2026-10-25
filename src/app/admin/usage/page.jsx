@@ -6,7 +6,7 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { AdminAreaChart } from "@/components/admin/admin-charts";
 import {
-  Sparkles,
+  Activity,
   MessageSquare,
   FileText,
   GitCompare,
@@ -134,7 +134,7 @@ export default function AdminUsagePage() {
                     : `${(summary.recordedTokens / 1000).toFixed(1)}k`
                   : "..."
               }
-              icon={Sparkles}
+              icon={Cpu}
               subtext={`${summary?.promptTokens?.toLocaleString() ?? 0} prompt / ${summary?.completionTokens?.toLocaleString() ?? 0} completion`}
               badgeText="Observed"
               badgeVariant="success"

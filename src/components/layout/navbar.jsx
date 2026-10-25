@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Sparkles, Menu, X, ArrowRight, LayoutDashboard } from "lucide-react";
+import { FileText, Menu, X, ArrowRight, LayoutDashboard } from "lucide-react";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
@@ -25,8 +25,8 @@ export function Navbar({ onOpenDemoModal }) {
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 font-bold text-xl tracking-tight group">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/30 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5" />
+          <div className="h-9 w-9 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs group-hover:scale-105 transition-transform">
+            <FileText className="w-5 h-5" />
           </div>
           <span>
             Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>

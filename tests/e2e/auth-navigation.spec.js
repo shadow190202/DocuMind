@@ -60,4 +60,14 @@ test.describe("E2E: Authentication & Navigation Gates", () => {
     await expect(page).toHaveURL(/\/admin\/dashboard/);
     await expect(page.getByText(/Admin|System|Overview|Telemetry/i).first()).toBeVisible();
   });
+
+  test("7. Public access to /terms and /privacy succeeds without authentication redirect", async ({ page }) => {
+    await page.goto("/terms");
+    await expect(page).toHaveURL(/\/terms/);
+    await expect(page.getByRole("heading", { name: /Terms of Service/i })).toBeVisible();
+
+    await page.goto("/privacy");
+    await expect(page).toHaveURL(/\/privacy/);
+    await expect(page.getByRole("heading", { name: /Privacy Policy/i })).toBeVisible();
+  });
 });

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   GitCompare,
   ArrowLeftRight,
-  Sparkles,
+  SlidersHorizontal,
   FileText,
   Copy,
   Check,
@@ -365,7 +365,7 @@ export function ComparisonView() {
                 size="sm"
                 onClick={handleSwap}
                 disabled={!sourceId || !targetId || generating}
-                className="h-9 w-9 p-0 rounded-full border-slate-200 dark:border-slate-700 hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-950/40"
+                className="h-9 w-9 p-0 rounded-md border-slate-200 dark:border-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 title="Swap Document A and Document B"
               >
                 <ArrowLeftRight className="w-4 h-4" />

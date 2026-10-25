@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { FileText, ArrowLeft } from "lucide-react";
 
 export default function AuthLayout({ children }) {
   return (
@@ -18,8 +18,8 @@ export default function AuthLayout({ children }) {
 
       {/* Brand Header */}
       <div className="mb-6 flex flex-col items-center space-y-2">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/30">
-          <Sparkles className="w-5 h-5" />
+        <div className="h-10 w-10 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+          <FileText className="w-5 h-5" />
         </div>
         <h1 className="text-xl font-bold tracking-tight">
           Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>

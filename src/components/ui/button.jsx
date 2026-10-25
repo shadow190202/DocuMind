@@ -11,10 +11,10 @@ export const buttonVariants = {
     link: "text-blue-600 underline-offset-4 hover:underline dark:text-blue-400 p-0 h-auto",
   },
   size: {
-    sm: "min-h-[2.25rem] h-9 px-3.5 py-1.5 text-xs rounded-lg font-medium",
-    md: "min-h-[2.5rem] h-10 px-4 py-2 text-sm rounded-lg font-medium",
-    lg: "min-h-[2.75rem] h-12 px-6 py-2.5 text-base rounded-lg font-medium",
-    icon: "h-9 w-9 min-w-[2.25rem] p-0 rounded-lg flex items-center justify-center shrink-0",
+    sm: "min-h-[2.25rem] h-9 px-3.5 py-1.5 text-xs rounded-md font-medium",
+    md: "min-h-[2.5rem] h-10 px-4 py-2 text-sm rounded-md font-medium",
+    lg: "min-h-[2.75rem] h-12 px-6 py-2.5 text-base rounded-md font-medium",
+    icon: "h-9 w-9 min-w-[2.25rem] p-0 rounded-md flex items-center justify-center shrink-0",
   },
 };
 

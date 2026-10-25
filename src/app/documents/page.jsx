@@ -14,7 +14,6 @@ import {
   ExternalLink,
   Eye,
   RefreshCw,
-  Sparkles,
   SlidersHorizontal,
   Check,
   Copy,
@@ -252,7 +251,7 @@ export default function DocumentsPage() {
               onClick={() => setSearchModalOpen(true)}
               className="gap-2 shadow-sm text-blue-600 dark:text-blue-400 w-full sm:w-auto justify-center"
             >
-              <Sparkles className="w-4 h-4" />
+              <Search className="w-4 h-4" />
               Vault Semantic Search
             </Button>
             <Button size="md" asChild className="gap-2 shadow-sm w-full sm:w-auto justify-center">
@@ -433,7 +432,7 @@ export default function DocumentsPage() {
                             Actions:
                           </span>
 
-                          {/* [ 👁 View ] */}
+                          {/* [ View ] */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -447,7 +446,7 @@ export default function DocumentsPage() {
                             </Link>
                           </Button>
 
-                          {/* [ 🔄 Reprocess ] */}
+                          {/* [ Reprocess ] */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -470,7 +469,7 @@ export default function DocumentsPage() {
                             <span>{doc.processingStatus === "completed" ? "Reprocess" : "Process"}</span>
                           </Button>
 
-                          {/* [ 👥 Share ] (Owner only) */}
+                          {/* [ Share ] (Owner only) */}
                           {doc.isOwner && (
                             <Button
                               variant="ghost"
@@ -484,7 +483,7 @@ export default function DocumentsPage() {
                             </Button>
                           )}
 
-                          {/* [ 🗑 Delete ] (Owner only) */}
+                          {/* [ Delete ] (Owner only) */}
                           {doc.isOwner && (
                             <Button
                               variant="ghost"
@@ -552,7 +551,7 @@ export default function DocumentsPage() {
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-6">
           <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600" />
+              <Search className="w-5 h-5 text-blue-600" />
               <DialogTitle className="text-base font-bold">
                 Vault Semantic Vector Search
               </DialogTitle>
@@ -740,7 +739,7 @@ export default function DocumentsPage() {
                   <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900 text-slate-200 overflow-hidden shadow-md">
                     <div className="bg-slate-800/90 px-4 py-2.5 border-b border-slate-700 flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                        <FileText className="w-3.5 h-3.5 text-blue-400" />
                         <span className="text-xs font-semibold text-white">
                           Assembled RAG Context (LLM Prompt-Ready)
                         </span>

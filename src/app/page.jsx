@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import {
   FileText,
-  Sparkles,
   Database,
   ShieldCheck,
   CheckCircle2,
@@ -63,33 +62,30 @@ export default function HomePage() {
         {/* 1. HERO SECTION */}
         {/* ============================================================ */}
         <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-32">
-          {/* Subtle background glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] max-w-full bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-3xl -z-10 rounded-full pointer-events-none" />
-
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
             {/* Version Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-900 shadow-sm animate-in fade-in">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>DocuMind v1.0 — AI Document Intelligence Platform</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800 shadow-2xs animate-in fade-in">
+              <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-500" />
+              <span>DocuMind v1.0 — PostgreSQL pgvector &amp; Grounded RAG Engine</span>
             </div>
 
             {/* Headline */}
             <div className="space-y-4 max-w-4xl mx-auto">
-              <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.15]">
-                Turn Static Documents into an{" "}
-                <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Interactive Knowledge Base
+              <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.15] text-slate-900 dark:text-white">
+                Document Intelligence with{" "}
+                <span className="text-blue-600 dark:text-blue-500">
+                  Verifiable Citations.
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Upload PDFs, DOCX, TXT, and CSV files. Ask natural-language questions, receive hallucination-free answers backed by verifiable page-level citations, and compare documents effortlessly.
+                Ingest PDF, DOCX, CSV, and TXT documents into a pgvector index. Run semantic search, synthesize grounded answers with exact page-level citations, and diff document revisions side-by-side.
               </p>
             </div>
 
             {/* CTA Group */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
               {isLoaded && isSignedIn ? (
-                <Button size="lg" className="w-full sm:w-auto gap-2 shadow-md shadow-blue-500/20" asChild>
+                <Button size="lg" className="w-full sm:w-auto gap-2 shadow-sm" asChild>
                   <Link href="/dashboard">
                     Open Workspace
                     <ArrowRight className="w-4 h-4" />
@@ -97,7 +93,7 @@ export default function HomePage() {
                 </Button>
               ) : (
                 <>
-                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-md shadow-blue-500/20" asChild>
+                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-sm" asChild>
                     <Link href="/sign-up">
                       Get Started Free
                       <ArrowRight className="w-4 h-4" />
@@ -117,7 +113,7 @@ export default function HomePage() {
                 className="w-full sm:w-auto gap-2"
                 onClick={() => setDemoDialogOpen(true)}
               >
-                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-500" />
                 Interactive Product Tour
               </Button>
             </div>
@@ -201,8 +197,8 @@ export default function HomePage() {
 
                       {/* AI Response with Source Citations */}
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm">
-                          <Sparkles className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+                          <FileText className="w-4 h-4" />
                         </div>
                         <div className="max-w-lg space-y-3">
                           <div className="rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm space-y-2 shadow-sm">
@@ -507,7 +503,7 @@ export default function HomePage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2 mb-1 text-blue-600 dark:text-blue-400">
-              <Sparkles className="w-4 h-4" />
+              <FileSearch className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">Product Tour</span>
             </div>
             <DialogTitle>Grounded RAG with Verifiable Citations</DialogTitle>
@@ -544,7 +540,7 @@ export default function HomePage() {
 
               <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300 leading-relaxed shadow-xs">
                 <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold text-[11px]">
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5" />
                   DocuMind Synthesized Answer
                 </div>
                 <p>

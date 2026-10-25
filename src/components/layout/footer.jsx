@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Sparkles, Github, Shield, Heart } from "lucide-react";
+import { FileText, Github, Shield } from "lucide-react";
 
 export function Footer() {
   return (
@@ -10,8 +10,8 @@ export function Footer() {
           {/* Brand Col */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5 font-bold text-xl tracking-tight">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/30">
-                <Sparkles className="w-4 h-4" />
+              <div className="h-8 w-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
+                <FileText className="w-4 h-4" />
               </div>
               <span>
                 Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>
@@ -68,9 +68,15 @@ export function Footer() {
 
         <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-4">
           <p>© {new Date().getFullYear()} DocuMind. Master Spec v1.0. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1">
-              Crafted with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" /> for full-stack engineering
+          <div className="flex items-center gap-6">
+            <Link href="/terms" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+              Privacy Policy
+            </Link>
+            <span className="text-slate-400 dark:text-slate-500 font-mono text-[11px] hidden md:inline">
+              DocuMind Engine v1.0 • pgvector RAG Active
             </span>
           </div>
         </div>

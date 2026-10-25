@@ -167,7 +167,7 @@ export default function AdminProcessingPage() {
               <div>
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <span>Failed Documents Diagnostic Log</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-normal">
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-normal">
                     {failedDocs.length} Failures
                   </span>
                 </CardTitle>

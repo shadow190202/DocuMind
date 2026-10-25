@@ -6,7 +6,7 @@ import {
   FileText,
   Upload,
   MessageSquare,
-  Sparkles,
+  Layers,
   HardDrive,
   TrendingUp,
   Search,
@@ -100,15 +100,15 @@ export default function DashboardPage() {
         {/* Dashboard Body */}
         <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl w-full mx-auto">
           {/* Welcome Banner */}
-          <div className="rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 sm:p-8 text-white shadow-md">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 text-slate-900 dark:text-slate-100 shadow-xs">
             <div className="max-w-2xl space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
-                AI Knowledge Assistant
+              <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                Workspace Overview
               </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Welcome to DocuMind
               </h2>
-              <p className="text-sm text-blue-100 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 Your PostgreSQL database and secure document vault are active. Upload PDFs, Word documents, CSVs, or text files to begin building your grounded vector knowledge base.
               </p>
             </div>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-xs font-medium text-slate-500">Vector Status</CardTitle>
-                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <Layers className="w-4 h-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">pgvector</div>
