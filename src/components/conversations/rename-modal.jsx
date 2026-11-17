@@ -67,7 +67,7 @@ export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {conversation ? (
+      {conversation && (
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2 text-theme-text font-semibold text-sm">
@@ -125,7 +125,7 @@ export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
             </DialogFooter>
           </form>
         </DialogContent>
-      ) : null}
+      )}
     </Dialog>
   );
 }
