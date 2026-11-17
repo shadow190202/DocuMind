@@ -51,12 +51,12 @@
   }
 
   /* Native <dialog> styling and ::backdrop */
+  dialog:not([open]) {
+    display: none !important;
+  }
+
   dialog {
     margin: auto;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: inherit;
     max-width: 100vw;
     max-height: 100dvh;
   }
@@ -64,6 +64,11 @@
   dialog::backdrop {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
+  }
+
+  /* Clerk UserButton identifier readability in dark/light mode */
+  .cl-userButtonOuterIdentifier {
+    color: var(--text-muted) !important;
   }
 
   /* Native HTML5 Popover styling and ::backdrop */

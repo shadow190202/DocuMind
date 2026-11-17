@@ -1,6 +1,15 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +43,11 @@ export function Dialog({ children, open: controlledOpen, onOpenChange }) {
 
     if (open) {
       if (!dialog.open) {
-        dialog.showModal();
+        try {
+          dialog.showModal();
+        } catch {
+          // ignore if already open
+        }
       }
     } else {
       if (dialog.open) {
@@ -69,15 +82,55 @@ export function DialogTrigger({ children, asChild }) {
   );
 }
 
-export function DialogContent({ className, children, ...props }) {
-  const { setOpen, dialogRef } = useContext(DialogContext);
+export const DialogContent = forwardRef(function DialogContent({ className, children, ...props }, forwardedRef) {
+  const { open, setOpen, dialogRef: contextRef } = useContext(DialogContext);
+  const internalRef = useRef(null);
+  const dialogRef = contextRef || internalRef;
+
+  useImperativeHandle(forwardedRef, () => dialogRef.current);
+
+  // Exclude `open` prop so it is never passed to <dialog> HTML attributes
+  const { open: _ignoredOpen, ...restProps } = props;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (open) {
+      if (!dialog.open) {
+        try {
+          dialog.showModal();
+        } catch {
+          // ignore if already open
+        }
+      }
+    } else {
+      if (dialog.open) {
+        try {
+          dialog.close();
+        } catch {
+          // ignore if already closed
+        }
+      }
+    }
+
+    return () => {
+      if (dialog && dialog.open) {
+        try {
+          dialog.close();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [open, dialogRef]);
 
   const handleNativeClose = () => {
     setOpen(false);
   };
 
   const handleBackdropClick = (e) => {
-    if (e.target === dialogRef?.current) {
+    if (e.target === dialogRef.current) {
       const rect = dialogRef.current.getBoundingClientRect();
       const clickedInDialog =
         rect.top <= e.clientY &&
@@ -97,25 +150,23 @@ export function DialogContent({ className, children, ...props }) {
       onCancel={handleNativeClose}
       onClick={handleBackdropClick}
       className={cn(
-        "m-auto p-0 bg-transparent text-theme-text rounded-2xl border-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in open:fade-in max-w-lg w-full",
+        "m-auto p-6 bg-theme-panel text-theme-text rounded-2xl border border-theme-divider shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm max-w-lg w-full relative outline-none",
         className
       )}
-      {...props}
+      {...restProps}
     >
-      <div className="relative w-full rounded-2xl bg-theme-panel p-6 border border-theme-divider text-theme-text shadow-2xl">
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="absolute right-4 top-4 rounded-lg p-1 text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
-        >
-          <X className="w-5 h-5" />
-          <span className="sr-only">Close</span>
-        </button>
-        {children}
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="absolute right-4 top-4 rounded-lg p-1 text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
+      >
+        <X className="w-5 h-5" />
+        <span className="sr-only">Close</span>
+      </button>
+      {children}
     </dialog>
   );
-}
+});
 
 export function DialogHeader({ className, children }) {
   return <div className={cn("flex flex-col space-y-2 text-left mb-4", className)}>{children}</div>;
