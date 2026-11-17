@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * GET /api/admin/usage
  * Grounded AI Usage Analytics & Consumer Leaderboard
  *
- * Mandatory Semantic Guarantees (Phase 9.5 & 14):
+ * Mandatory Semantic Guarantees:
  * 1. Only sums actual recorded tokens where total_tokens IS NOT NULL.
  * 2. Never claims 0 for unrecorded embedding calls; represents metadata as unavailable.
  * 3. Preserves official provider quota independence disclaimer.

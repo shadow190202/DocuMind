@@ -10,7 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className="antialiased">
+        <body className="antialiased bg-theme-body text-theme-text min-h-[100dvh]">
           {children}
         </body>
       </html>

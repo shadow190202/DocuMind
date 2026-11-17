@@ -7,7 +7,7 @@ import { run as runChat } from "./chat-api.test.mjs";
 import { run as runSummarize } from "./summarize-api.test.mjs";
 import { run as runCompare } from "./compare-api.test.mjs";
 import { run as runAdmin } from "./admin-api.test.mjs";
-import { run as runSecurityPhase15 } from "./security-phase15.test.mjs";
+import { run as runSecurity } from "./security.test.mjs";
 
 export async function runAllIntegrationTests() {
   console.log("==========================================================");
@@ -28,7 +28,7 @@ export async function runAllIntegrationTests() {
     { name: "Document Summaries & Cache", fn: runSummarize },
     { name: "Document Comparison", fn: runCompare },
     { name: "Admin Authorization & Directory", fn: runAdmin },
-    { name: "Phase 15 Security Invariants", fn: runSecurityPhase15 },
+    { name: "Security & Hardening Invariants", fn: runSecurity },
   ];
 
   for (const suite of suites) {

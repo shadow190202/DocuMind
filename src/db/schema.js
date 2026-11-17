@@ -11,13 +11,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
-// ============================================================
-// 1. USERS TABLE (Linked to Clerk Authentication)
-// ============================================================
+/**
+ * Users table (synced with Clerk Authentication)
+ */
 export const users = pgTable(
   "users",
   {
-    id: text("id").primaryKey(), // Clerk user ID (e.g., user_2xxx)
+    id: text("id").primaryKey(), // Clerk user ID
     name: text("name"),
     email: text("email").notNull(),
     role: text("role").default("user").notNull(), // 'user' | 'admin'
@@ -29,9 +29,9 @@ export const users = pgTable(
   ]
 );
 
-// ============================================================
-// 2. DOCUMENTS TABLE
-// ============================================================
+/**
+ * Documents table
+ */
 export const documents = pgTable(
   "documents",
   {
@@ -58,9 +58,9 @@ export const documents = pgTable(
   ]
 );
 
-// ============================================================
-// 3. DOCUMENT CHUNKS TABLE (With PostgreSQL + pgvector)
-// ============================================================
+/**
+ * Document Chunks table (PostgreSQL pgvector 768-dim embeddings)
+ */
 export const documentChunks = pgTable("document_chunks", {
   id: uuid("id").defaultRandom().primaryKey(),
   documentId: uuid("document_id")
@@ -69,14 +69,13 @@ export const documentChunks = pgTable("document_chunks", {
   chunkIndex: integer("chunk_index").default(0).notNull(),
   content: text("content").notNull(),
   pageNumber: integer("page_number"),
-  // 768 dimensions for Gemini gemini-embedding-001
   embedding: vector("embedding", { dimensions: 768 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// ============================================================
-// 4. CONVERSATIONS TABLE
-// ============================================================
+/**
+ * Conversations table
+ */
 export const conversations = pgTable(
   "conversations",
   {
@@ -86,7 +85,7 @@ export const conversations = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     documentId: uuid("document_id").references(() => documents.id, {
       onDelete: "cascade",
-    }), // Optional: if null, multi-document conversation
+    }),
     title: text("title").default("New Conversation").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -97,9 +96,9 @@ export const conversations = pgTable(
   ]
 );
 
-// ============================================================
-// 5. MESSAGES TABLE
-// ============================================================
+/**
+ * Messages table
+ */
 export const messages = pgTable(
   "messages",
   {
@@ -120,9 +119,9 @@ export const messages = pgTable(
   ]
 );
 
-// ============================================================
-// 6. DOCUMENT PERMISSIONS TABLE (Sharing & Access Control)
-// ============================================================
+/**
+ * Document Permissions table (Role-based access & sharing)
+ */
 export const documentPermissions = pgTable(
   "document_permissions",
   {
@@ -147,9 +146,9 @@ export const documentPermissions = pgTable(
   ]
 );
 
-// ============================================================
-// 7. AI USAGE LOGS TABLE (Transparent Free-Tier Token Tracking)
-// ============================================================
+/**
+ * AI Usage Logs table (Token consumption tracking)
+ */
 export const aiUsageLogs = pgTable(
   "ai_usage_logs",
   {
@@ -157,11 +156,11 @@ export const aiUsageLogs = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    model: text("model").notNull(), // 'gemini-3.8-flash'
-    operation: text("operation").notNull(), // 'chat'
-    promptTokens: integer("prompt_tokens"), // nullable if usageMetadata unavailable
-    completionTokens: integer("completion_tokens"), // nullable if usageMetadata unavailable
-    totalTokens: integer("total_tokens"), // nullable if usageMetadata unavailable
+    model: text("model").notNull(),
+    operation: text("operation").notNull(), // 'chat' | 'summarize' | 'compare'
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    totalTokens: integer("total_tokens"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -170,9 +169,9 @@ export const aiUsageLogs = pgTable(
   ]
 );
 
-// ============================================================
-// 8. DOCUMENT SUMMARIES TABLE (Phase 11 Cached Summaries)
-// ============================================================
+/**
+ * Document Summaries table (Cached multi-dimensional summaries)
+ */
 export const documentSummaries = pgTable(
   "document_summaries",
   {
@@ -183,18 +182,17 @@ export const documentSummaries = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    summaryType: text("summary_type").notNull(), // 'executive' | 'detailed' | 'key_points' | 'dates' | 'numbers' | 'action_items' | 'comprehensive'
-    content: text("content").notNull(), // Authoritative generated Markdown content
-    structuredData: jsonb("structured_data"), // Optional, defaults to null in Phase 11
-    model: text("model").notNull(), // 'gemini-3.8-flash'
-    promptTokens: integer("prompt_tokens"), // Nullable if usageMetadata unavailable
+    summaryType: text("summary_type").notNull(),
+    content: text("content").notNull(),
+    structuredData: jsonb("structured_data"),
+    model: text("model").notNull(),
+    promptTokens: integer("prompt_tokens"),
     completionTokens: integer("completion_tokens"),
     totalTokens: integer("total_tokens"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    // Unique constraint: strictly guarantees only one cached summary per document and summary type
     uniqueIndex("doc_summaries_doc_type_uniq_idx").on(
       table.documentId,
       table.summaryType
@@ -204,9 +202,9 @@ export const documentSummaries = pgTable(
   ]
 );
 
-// ============================================================
-// DOCUMENT COMPARISONS (Phase 12)
-// ============================================================
+/**
+ * Document Comparisons table (Cached cross-document comparative analyses)
+ */
 export const documentComparisons = pgTable(
   "document_comparisons",
   {
@@ -220,18 +218,16 @@ export const documentComparisons = pgTable(
     targetDocumentId: uuid("target_document_id")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    content: text("content").notNull(), // Authoritative generated Markdown comparison report
-    structuredData: jsonb("structured_data"), // Nullable and NULL for Phase 12
-    model: text("model").notNull(), // 'gemini-3.8-flash'
-    promptTokens: integer("prompt_tokens"), // Nullable if usageMetadata unavailable
+    content: text("content").notNull(),
+    structuredData: jsonb("structured_data"),
+    model: text("model").notNull(),
+    promptTokens: integer("prompt_tokens"),
     completionTokens: integer("completion_tokens"),
     totalTokens: integer("total_tokens"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    // Directional unique pair: (sourceDocumentId, targetDocumentId)
-    // (A, B) and (B, A) are separate directional records
     uniqueIndex("doc_comparisons_pair_uniq_idx").on(
       table.sourceDocumentId,
       table.targetDocumentId
@@ -242,9 +238,7 @@ export const documentComparisons = pgTable(
   ]
 );
 
-// ============================================================
-// DRIZZLE RELATIONS DEFINITIONS
-// ============================================================
+// Drizzle Relations
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
   conversations: many(conversations),
@@ -338,4 +332,3 @@ export const documentComparisonsRelations = relations(documentComparisons, ({ on
     relationName: "targetComparisons",
   }),
 }));
-

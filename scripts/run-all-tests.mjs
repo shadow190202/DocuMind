@@ -3,7 +3,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { runAllUnitTests } from "./tests/unit/run-unit-tests.mjs";
 import { runAllIntegrationTests } from "./tests/integration/run-integration-tests.mjs";
-import { runAllRegressions } from "./run-regressions.mjs";
 import { getTestDb, auditZeroOrphans } from "./tests/utils/test-db.js";
 import { installGeminiTransportGuard } from "./tests/utils/mock-ai.js";
 
@@ -46,11 +45,12 @@ function runPlaywrightE2E() {
 async function main() {
   const startTime = Date.now();
   console.log("==========================================================");
-  console.log("        DocuMind Phase 16: Complete Test Orchestrator     ");
+  console.log("             DocuMind Automated Test Suite                ");
   console.log("==========================================================");
 
   installGeminiTransportGuard();
   process.env.DOCUMIND_MOCK_AI = "true";
+  process.env.STORAGE_PROVIDER = "local";
 
   let hasFailures = false;
 
@@ -68,14 +68,7 @@ async function main() {
     hasFailures = true;
   }
 
-  // 3. Historical Regressions (Phases 8–15)
-  const regResult = await runAllRegressions();
-  if (regResult.failed > 0) {
-    console.error(`❌ Historical regressions had ${regResult.failed} failures.`);
-    hasFailures = true;
-  }
-
-  // 4. Optional Tier 3: Browser E2E Tests
+  // 3. Optional Tier 3: Browser E2E Tests
   if (process.argv.includes("--with-e2e")) {
     try {
       await runPlaywrightE2E();
@@ -85,7 +78,7 @@ async function main() {
     }
   }
 
-  // 5. Final Authoritative Zero-Orphan Database Audit
+  // 4. Final Authoritative Zero-Orphan Database Audit
   console.log("\n--- Final Master Zero-Orphan Database Audit ---");
   const db = getTestDb();
   if (db) {

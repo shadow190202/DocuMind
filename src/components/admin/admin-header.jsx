@@ -11,7 +11,7 @@ import {
   Activity,
   Server,
   ArrowLeft,
-  ShieldAlert,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -21,52 +21,47 @@ const adminTabs = [
   { label: "Overview", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Documents", href: "/admin/documents", icon: FileText },
-  { label: "Processing Monitor", href: "/admin/processing", icon: Cpu },
-  { label: "AI Usage", href: "/admin/usage", icon: Activity },
-  { label: "System Health", href: "/admin/system", icon: Server },
+  { label: "Processing monitor", href: "/admin/processing", icon: Cpu },
+  { label: "AI usage", href: "/admin/usage", icon: Activity },
+  { label: "System health", href: "/admin/system", icon: Server },
 ];
 
-export function AdminHeader({ title = "Admin Console", subtitle }) {
+export function AdminHeader({ title = "Admin console", subtitle }) {
   const pathname = usePathname();
 
   return (
-    <header className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
+    <header className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
       {/* Top Banner */}
-      <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/60">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-4 h-4" />
+      <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+            <Shield className="w-3.5 h-3.5" strokeWidth={1.5} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-slate-900 dark:text-white">
-                {title}
-              </h1>
-              <Badge
-                variant="secondary"
-                className="bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-[11px]"
-              >
-                Superadmin
-              </Badge>
-            </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {title}
+            </h1>
+            <Badge variant="secondary" className="text-xs font-normal">
+              Admin
+            </Badge>
             {subtitle && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {subtitle}
-              </p>
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                • {subtitle}
+              </span>
             )}
           </div>
         </div>
 
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/dashboard" className="gap-1.5 text-xs">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back to App
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/dashboard" className="gap-1.5 text-xs text-slate-500">
+            <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
+            Back to app
           </Link>
         </Button>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="px-4 sm:px-6 flex items-center gap-1 overflow-x-auto scrollbar-none py-1">
+      <div className="px-4 sm:px-6 flex items-center gap-1 overflow-x-auto py-1">
         {adminTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = pathname === tab.href;
@@ -75,19 +70,20 @@ export function AdminHeader({ title = "Admin Console", subtitle }) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap",
+                "flex items-center gap-2 px-3 h-8 text-xs font-medium rounded-lg transition-colors whitespace-nowrap",
                 isActive
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-semibold shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/60"
+                  ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 font-medium"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900"
               )}
             >
               <Icon
                 className={cn(
                   "w-3.5 h-3.5",
                   isActive
-                    ? "text-purple-600 dark:text-purple-400"
+                    ? "text-slate-900 dark:text-slate-100"
                     : "text-slate-400"
                 )}
+                strokeWidth={1.5}
               />
               <span>{tab.label}</span>
             </Link>
@@ -97,3 +93,5 @@ export function AdminHeader({ title = "Admin Console", subtitle }) {
     </header>
   );
 }
+
+export default AdminHeader;

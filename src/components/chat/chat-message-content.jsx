@@ -17,7 +17,7 @@ export function SourcePill({ number, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded font-mono text-[10px] font-semibold bg-blue-100/80 hover:bg-blue-200/90 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-300/80 dark:border-blue-800 transition-colors cursor-pointer align-baseline select-none shadow-2xs"
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded font-mono text-[10px] font-semibold bg-theme-ai/10 hover:bg-theme-ai/20 text-theme-aiAccent border border-theme-ai/20 transition-colors cursor-pointer align-baseline select-none shadow-2xs"
       title={`Jump to Source ${number}`}
     >
       <span className="opacity-60 text-[9px]">#</span>
@@ -42,11 +42,7 @@ export function InlineFormattedText({ text, isUser = false, onSourceClick }) {
           return (
             <strong
               key={idx}
-              className={
-                isUser
-                  ? "font-semibold text-white"
-                  : "font-semibold text-slate-900 dark:text-slate-100"
-              }
+              className="font-semibold text-theme-text"
             >
               {token.text}
             </strong>
@@ -63,11 +59,7 @@ export function InlineFormattedText({ text, isUser = false, onSourceClick }) {
           return (
             <code
               key={idx}
-              className={`px-1 py-0.5 rounded font-mono text-[11px] ${
-                isUser
-                  ? "bg-blue-700 text-white"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-              }`}
+              className="px-1 py-0.5 rounded font-mono text-[11px] bg-theme-body text-theme-text border border-theme-divider"
             >
               {token.text}
             </code>
@@ -117,7 +109,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
   const blocks = splitMarkdownBlocks(content);
 
   return (
-    <div className="space-y-2 text-xs md:text-sm leading-relaxed text-slate-800 dark:text-slate-200 font-sans">
+    <div className="space-y-2 text-xs md:text-sm leading-relaxed text-theme-text font-sans">
       {blocks.map((block, bIdx) => {
         const trimmed = block.trim();
         if (!trimmed) return null;
@@ -133,10 +125,10 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
           return (
             <div
               key={bIdx}
-              className="my-2.5 rounded-xl bg-slate-900 text-slate-100 p-3 font-mono text-xs overflow-x-auto border border-slate-800 shadow-sm"
+              className="my-2.5 rounded-xl bg-slate-900 text-slate-100 p-3 font-mono text-xs overflow-x-auto border border-theme-divider shadow-sm"
             >
               {lang && (
-                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 pb-1 border-b border-slate-800">
+                <div className="text-[10px] font-semibold text-theme-aiAccent uppercase tracking-wider mb-1.5 pb-1 border-b border-theme-divider">
                   {lang}
                 </div>
               )}
@@ -164,16 +156,16 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
           return (
             <div
               key={bIdx}
-              className="my-2.5 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs"
+              className="my-2.5 overflow-x-auto rounded-xl border border-theme-divider shadow-xs"
             >
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <thead className="bg-theme-body text-theme-text font-semibold border-b border-theme-divider">
                   {headerLines.map((hLine, hIdx) => (
                     <tr key={`th-${hIdx}`}>
                       {parseTableCells(hLine).map((cell, cIdx) => (
                         <th
                           key={`th-c-${cIdx}`}
-                          className="px-3 py-2 font-semibold text-slate-900 dark:text-slate-100"
+                          className="px-3 py-2 font-semibold text-theme-text"
                         >
                           <InlineFormattedText
                             text={cell}
@@ -184,11 +176,11 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
                     </tr>
                   ))}
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                <tbody className="divide-y divide-theme-divider text-theme-text">
                   {bodyLines.map((bLine, rIdx) => (
                     <tr
                       key={`tb-${rIdx}`}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors"
+                      className="hover:bg-theme-body/50 transition-colors"
                     >
                       {parseTableCells(bLine).map((cell, cIdx) => (
                         <td key={`td-c-${cIdx}`} className="px-3 py-1.5">
@@ -211,7 +203,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
           return (
             <h3
               key={bIdx}
-              className="text-xs md:text-sm font-bold text-slate-900 dark:text-slate-100 mt-3 mb-1"
+              className="text-xs md:text-sm font-bold text-theme-text mt-3 mb-1"
             >
               <InlineFormattedText
                 text={trimmed.replace(/^###\s+/, "")}
@@ -224,7 +216,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
           return (
             <h2
               key={bIdx}
-              className="text-sm md:text-base font-bold text-slate-900 dark:text-slate-100 mt-3.5 mb-1.5 pb-0.5 border-b border-slate-100 dark:border-slate-800"
+              className="text-sm md:text-base font-bold text-theme-text mt-3.5 mb-1.5 pb-0.5 border-b border-theme-divider"
             >
               <InlineFormattedText
                 text={trimmed.replace(/^##\s+/, "")}
@@ -237,7 +229,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
           return (
             <h1
               key={bIdx}
-              className="text-base md:text-lg font-bold text-slate-900 dark:text-slate-100 mt-4 mb-2"
+              className="text-base md:text-lg font-bold text-theme-text mt-4 mb-2"
             >
               <InlineFormattedText
                 text={trimmed.replace(/^#\s+/, "")}
@@ -252,7 +244,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
           return (
             <blockquote
               key={bIdx}
-              className="border-l-4 border-blue-400 dark:border-blue-600 pl-3 my-2 italic text-slate-600 dark:text-slate-400"
+              className="border-l-4 border-theme-ai pl-3 my-2 italic text-theme-muted"
             >
               <InlineFormattedText
                 text={trimmed.replace(/^>\s+/, "")}
@@ -290,7 +282,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
                 return (
                   <ul
                     key={gIdx}
-                    className="space-y-1 my-1.5 list-disc pl-5 text-slate-700 dark:text-slate-300"
+                    className="space-y-1 my-1.5 list-disc pl-5 text-theme-text"
                   >
                     {group.items.map((it, itIdx) => (
                       <li key={itIdx}>
@@ -308,7 +300,7 @@ export function ChatMessageContent({ content, isUser = false, onSourceClick }) {
                 return (
                   <ol
                     key={gIdx}
-                    className="space-y-1 my-1.5 list-decimal pl-5 text-slate-700 dark:text-slate-300"
+                    className="space-y-1 my-1.5 list-decimal pl-5 text-theme-text"
                   >
                     {group.items.map((it, itIdx) => (
                       <li key={itIdx}>

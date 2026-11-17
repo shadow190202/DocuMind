@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 export function AdminAreaChart({
   data = [],
   height = 200,
-  color = "indigo",
+  color = "blue",
   label = "Items",
   className,
 }) {
@@ -56,13 +56,13 @@ export function AdminAreaChart({
   } L ${points[0].x} ${paddingTop + chartHeight} Z`;
 
   const strokeColor =
-    color === "indigo"
-      ? "#6366f1"
-      : color === "emerald"
+    color === "emerald"
       ? "#10b981"
-      : color === "purple"
-      ? "#a855f7"
-      : "#3b82f6";
+      : color === "slate"
+      ? "#64748b"
+      : color === "violet"
+      ? "#8b5cf6"
+      : "#2563eb";
 
   const gradientId = `area-gradient-${color}`;
 
@@ -220,7 +220,7 @@ export function AdminDonutChart({
     docx: "#3b82f6", // Blue
     txt: "#10b981", // Emerald
     csv: "#f59e0b", // Amber
-    other: "#8b5cf6", // Purple
+    other: "#64748b", // Slate
   };
 
   let accumulatedPercent = 0;
@@ -338,7 +338,7 @@ export function AdminBarChart({ items = [], className }) {
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div
-                className={cn("h-full rounded-full transition-all duration-300", item.colorClass || "bg-indigo-600")}
+                className={cn("h-full rounded-full transition-all duration-300", item.colorClass || "bg-blue-600")}
                 style={{ width: `${pct}%` }}
               />
             </div>

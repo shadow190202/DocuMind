@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  *
  * Mandatory Invariants:
  * 1. Independent Server-Side Admin Authorization.
- * 2. Reuses authoritative Phase 5-7 processing pipeline (executeDocumentProcessing).
+ * 2. Reuses authoritative document processing pipeline (executeDocumentProcessing).
  * 3. Uses DOCUMENT OWNER'S userId for storage and extracted paths (never admin ID).
  * 4. Transactionally replaces chunks and invalidates summaries and comparisons.
  * 5. Returns client-safe document metadata; never exposes storageUrl.

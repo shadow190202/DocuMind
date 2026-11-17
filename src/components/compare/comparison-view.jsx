@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Info,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -270,7 +271,7 @@ export function ComparisonView() {
       seg.bold ? (
         <strong
           key={sIdx}
-          className="font-semibold text-slate-900 dark:text-slate-100"
+          className="font-semibold text-theme-text"
         >
           {seg.text}
         </strong>
@@ -292,30 +293,29 @@ export function ComparisonView() {
   return (
     <div className="space-y-6">
       {/* 1. Document Selection Bar */}
-      <Card className="border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm shadow-sm">
+      <Card className="border-theme-divider bg-theme-panel/70 backdrop-blur-sm shadow-xs">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base md:text-lg flex items-center gap-2">
-            <GitCompare className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            <span>Select Document Pair to Compare</span>
+          <CardTitle className="text-base flex items-center gap-2 font-medium">
+            <GitCompare className="w-4 h-4 text-theme-muted" strokeWidth={1.5} />
+            <span>Select document pair to compare</span>
           </CardTitle>
-          <CardDescription>
-            Choose a baseline document and a revised version. DocuMind will
-            extract additions, omissions, modified terms, and numerical changes.
+          <CardDescription className="text-xs text-theme-muted">
+            Choose a baseline document and a revised version to extract additions, omissions, modified terms, and numerical changes.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr,auto,1fr] gap-4 items-center">
             {/* Document A (Base) */}
-            <div className="space-y-2 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="space-y-2 p-3.5 rounded-lg border border-theme-divider bg-theme-body/50">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  Document A (Base / Original)
+                <label className="text-xs font-medium text-theme-muted flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-theme-muted" />
+                  Document A (baseline)
                 </label>
                 {sourceDoc && (
-                  <Badge variant="outline" className="text-[10px] font-normal">
-                    {sourceDoc.fileType?.toUpperCase() || "PDF"}
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {sourceDoc.fileType?.toLowerCase()}
                   </Badge>
                 )}
               </div>
@@ -327,9 +327,9 @@ export function ComparisonView() {
                   setError(null);
                 }}
                 disabled={loadingDocs || generating}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+                className="w-full px-3 py-2 text-xs bg-theme-panel border border-theme-divider rounded-lg text-theme-text focus:outline-none focus:ring-1 focus:ring-theme-primary font-normal"
               >
-                <option value="">-- Select Base Document --</option>
+                <option value="">-- Select base document --</option>
                 {completedDocuments.map((doc) => (
                   <option key={doc.id} value={doc.id}>
                     {doc.filename}{!doc.isOwner ? ` (Shared by ${doc.owner?.name || doc.owner?.email || "colleague"})` : ""}
@@ -338,7 +338,7 @@ export function ComparisonView() {
               </select>
 
               {sourceDoc && (
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-theme-muted tabular-nums">
                   <span>Size: {formatFileSize(sourceDoc.fileSize)}</span>
                   <span>•</span>
                   <span>
@@ -348,7 +348,7 @@ export function ComparisonView() {
                   {!sourceDoc.isOwner && (
                     <>
                       <span>•</span>
-                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                      <span className="text-theme-muted font-medium">
                         Shared ({sourceDoc.role === "write" ? "Editor" : "Viewer"})
                       </span>
                     </>
@@ -365,23 +365,23 @@ export function ComparisonView() {
                 size="sm"
                 onClick={handleSwap}
                 disabled={!sourceId || !targetId || generating}
-                className="h-9 w-9 p-0 rounded-md border-slate-200 dark:border-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                className="h-8 w-8 p-0 rounded-md border-theme-divider hover:bg-theme-body hover:text-theme-text"
                 title="Swap Document A and Document B"
               >
-                <ArrowLeftRight className="w-4 h-4" />
+                <ArrowLeftRight className="w-3.5 h-3.5" strokeWidth={1.5} />
               </Button>
             </div>
 
             {/* Document B (Revised) */}
-            <div className="space-y-2 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="space-y-2 p-3.5 rounded-lg border border-theme-divider bg-theme-body/50">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-purple-500" />
-                  Document B (Target / Revised)
+                <label className="text-xs font-medium text-theme-muted flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-theme-primary" />
+                  Document B (revised)
                 </label>
                 {targetDoc && (
-                  <Badge variant="outline" className="text-[10px] font-normal">
-                    {targetDoc.fileType?.toUpperCase() || "PDF"}
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {targetDoc.fileType?.toLowerCase()}
                   </Badge>
                 )}
               </div>
@@ -393,18 +393,18 @@ export function ComparisonView() {
                   setError(null);
                 }}
                 disabled={loadingDocs || generating}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+                className="w-full px-3 py-2 text-xs bg-theme-panel border border-theme-divider rounded-lg text-theme-text focus:outline-none focus:ring-1 focus:ring-theme-primary font-normal"
               >
-                <option value="">-- Select Revised Document --</option>
+                <option value="">-- Select revised document --</option>
                 {completedDocuments.map((doc) => (
                   <option key={doc.id} value={doc.id}>
-                    {doc.filename} {doc.id === sourceId ? "(Selected as Base)" : !doc.isOwner ? `(Shared by ${doc.owner?.name || doc.owner?.email || "colleague"})` : ""}
+                    {doc.filename} {doc.id === sourceId ? "(Selected as base)" : !doc.isOwner ? `(Shared by ${doc.owner?.name || doc.owner?.email || "colleague"})` : ""}
                   </option>
                 ))}
               </select>
 
               {targetDoc && (
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-400">
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-theme-muted tabular-nums">
                   <span>Size: {formatFileSize(targetDoc.fileSize)}</span>
                   <span>•</span>
                   <span>
@@ -414,7 +414,7 @@ export function ComparisonView() {
                   {!targetDoc.isOwner && (
                     <>
                       <span>•</span>
-                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                      <span className="text-theme-muted font-medium">
                         Shared ({targetDoc.role === "write" ? "Editor" : "Viewer"})
                       </span>
                     </>
@@ -428,6 +428,7 @@ export function ComparisonView() {
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <div className="flex items-center gap-2">
               <Button
+                variant="ai"
                 onClick={() => handleCompare(false)}
                 disabled={
                   !sourceId ||
@@ -436,18 +437,18 @@ export function ComparisonView() {
                   generating ||
                   loading
                 }
-                className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs md:text-sm gap-2 shadow-sm shadow-purple-500/20"
+                className="font-medium text-xs gap-2"
               >
                 {generating ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Analyzing Documents with Gemini...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                    <span>Analyzing documents...</span>
                   </>
                 ) : (
                   <>
-                    <GitCompare className="w-4 h-4" />
+                    <GitCompare className="w-3.5 h-3.5" strokeWidth={1.5} />
                     <span>
-                      {comparison ? "View / Re-analyze" : "Compare Documents"}
+                      {comparison ? "View / re-analyze" : "Compare documents"}
                     </span>
                   </>
                 )}
@@ -461,8 +462,8 @@ export function ComparisonView() {
                   disabled={generating}
                   className="text-xs gap-1.5"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Regenerate Analysis</span>
+                  <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>Regenerate</span>
                 </Button>
               )}
             </div>
@@ -477,7 +478,7 @@ export function ComparisonView() {
           {/* Error Message */}
           {error && (
             <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={1.5} />
               <span>{error}</span>
             </div>
           )}
@@ -487,8 +488,8 @@ export function ComparisonView() {
       {/* 2. Recent Comparisons Quick-Picks */}
       {recentComparisons.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Recent Comparisons
+          <p className="text-xs font-medium text-theme-muted">
+            Recent comparisons
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {recentComparisons.map((item) => {
@@ -504,17 +505,17 @@ export function ComparisonView() {
                     setTargetId(item.targetDocumentId);
                     setError(null);
                   }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                     isCurrent
-                      ? "bg-purple-50 dark:bg-purple-950/50 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 shadow-sm"
-                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+                      ? "bg-theme-panel border-theme-primary text-theme-primary"
+                      : "bg-theme-panel border-theme-divider text-theme-muted hover:bg-theme-body hover:text-theme-text"
                   }`}
                 >
-                  <span className="truncate max-w-[120px] font-semibold">
+                  <span className="truncate max-w-[140px] font-medium">
                     {item.sourceFilename}
                   </span>
-                  <span className="text-slate-400">→</span>
-                  <span className="truncate max-w-[120px] font-semibold">
+                  <span className="text-theme-muted">→</span>
+                  <span className="truncate max-w-[140px] font-medium">
                     {item.targetFilename}
                   </span>
                 </button>
@@ -526,20 +527,17 @@ export function ComparisonView() {
 
       {/* 3. Loading State */}
       {generating && (
-        <Card className="border-slate-200 dark:border-slate-800">
-          <CardContent className="py-12 text-center space-y-4">
-            <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-purple-200 dark:border-purple-900 border-t-purple-600 animate-spin" />
-              <GitCompare className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
+        <Card className="border-theme-divider">
+          <CardContent className="py-12 text-center space-y-3">
+            <Loader2 className="w-6 h-6 text-theme-muted animate-spin mx-auto" strokeWidth={1.5} />
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                Running Grounded Comparative Analysis...
+              <h3 className="text-sm font-medium text-theme-text">
+                Running comparative analysis...
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              <p className="text-xs text-theme-muted max-w-md mx-auto leading-relaxed">
                 Comparing document sections, aligning semantic vectors, and
                 categorizing additions, omissions, altered terms, and numerical
-                revisions with Gemini 3.8 Flash.
+                revisions.
               </p>
             </div>
           </CardContent>
@@ -548,18 +546,18 @@ export function ComparisonView() {
 
       {/* 4. Comparison Results Display */}
       {comparison && !generating && (
-        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+        <Card className="border-theme-divider bg-theme-panel shadow-sm">
+          <CardHeader className="border-b border-theme-divider pb-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                <CardTitle className="text-base md:text-lg flex items-center gap-2 text-theme-text">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                   <span>
                     Comparative Report: {sourceDoc?.filename || "Base"} vs{" "}
                     {targetDoc?.filename || "Revised"}
                   </span>
                 </CardTitle>
-                <CardDescription className="text-xs mt-1">
+                <CardDescription className="text-xs text-theme-muted mt-1">
                   Authoritative differences and alignment across six structured
                   analysis dimensions.
                 </CardDescription>
@@ -602,7 +600,7 @@ export function ComparisonView() {
                   size="sm"
                   variant="outline"
                   onClick={() => setShowRegenerateDialog(true)}
-                  className="text-xs gap-1.5 hover:text-purple-600 dark:hover:text-purple-400 shadow-xs"
+                  className="text-xs gap-1.5 hover:text-theme-text"
                   title="Regenerate comparison with Gemini"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -612,7 +610,7 @@ export function ComparisonView() {
             </div>
 
             {/* Metadata Bar */}
-            <div className="flex flex-wrap items-center gap-2 pt-3 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 pt-3 text-xs text-theme-muted">
               <Badge
                 variant="secondary"
                 className="gap-1 font-normal text-[11px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
@@ -633,13 +631,13 @@ export function ComparisonView() {
               ) : (
                 <Badge
                   variant="outline"
-                  className="font-normal text-[11px] text-slate-400"
+                  className="font-normal text-[11px] text-theme-muted"
                 >
                   Tokens unavailable
                 </Badge>
               )}
 
-              <span className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 ml-auto">
+              <span className="flex items-center gap-1 text-[11px] text-theme-muted ml-auto">
                 <Clock className="w-3 h-3" />
                 {new Date(
                   comparison.updatedAt || comparison.createdAt
@@ -678,16 +676,16 @@ export function ComparisonView() {
                   return (
                     <div
                       key={idx}
-                      className="my-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm"
+                      className="my-4 overflow-x-auto rounded-lg border border-theme-divider shadow-xs"
                     >
                       <table className="w-full text-left text-xs md:text-sm border-collapse">
-                        <thead className="bg-slate-50 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-800">
+                        <thead className="bg-theme-body text-theme-text font-semibold border-b border-theme-divider">
                           {headerLines.map((hLine, hIdx) => (
                             <tr key={`th-row-${hIdx}`}>
                               {parseTableCells(hLine).map((cell, cIdx) => (
                                 <th
                                   key={`th-${cIdx}`}
-                                  className="px-3.5 py-2.5 font-semibold text-slate-900 dark:text-slate-100"
+                                  className="px-3.5 py-2.5 font-semibold text-theme-text"
                                 >
                                   {renderFormattedText(cell)}
                                 </th>
@@ -695,11 +693,11 @@ export function ComparisonView() {
                             </tr>
                           ))}
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                        <tbody className="divide-y divide-theme-divider text-theme-text">
                           {bodyLines.map((bLine, bIdx) => (
                             <tr
                               key={`tb-row-${bIdx}`}
-                              className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors"
+                              className="hover:bg-theme-body/50 transition-colors"
                             >
                               {parseTableCells(bLine).map((cell, cIdx) => (
                                 <td key={`td-${cIdx}`} className="px-3.5 py-2">
@@ -719,7 +717,7 @@ export function ComparisonView() {
                   return (
                     <h3
                       key={idx}
-                      className="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 mb-2"
+                      className="text-base font-bold text-theme-text mt-5 mb-2"
                     >
                       {renderFormattedText(trimmed.replace(/^###\s+/, ""))}
                     </h3>
@@ -729,7 +727,7 @@ export function ComparisonView() {
                   return (
                     <h2
                       key={idx}
-                      className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-6 mb-3 pb-1 border-b border-slate-100 dark:border-slate-800"
+                      className="text-lg font-bold text-theme-text mt-6 mb-3 pb-1 border-b border-theme-divider"
                     >
                       {renderFormattedText(trimmed.replace(/^##\s+/, ""))}
                     </h2>
@@ -739,7 +737,7 @@ export function ComparisonView() {
                   return (
                     <h1
                       key={idx}
-                      className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-6 mb-3"
+                      className="text-xl font-bold text-theme-text mt-6 mb-3"
                     >
                       {renderFormattedText(trimmed.replace(/^#\s+/, ""))}
                     </h1>
@@ -760,7 +758,7 @@ export function ComparisonView() {
                   return (
                     <ul
                       key={idx}
-                      className="space-y-1.5 my-3 list-disc pl-5 text-slate-700 dark:text-slate-300"
+                      className="space-y-1.5 my-3 list-disc pl-5 text-theme-text"
                     >
                       {items.map((it, itIdx) => (
                         <li key={itIdx}>
@@ -775,7 +773,7 @@ export function ComparisonView() {
                 return (
                   <p
                     key={idx}
-                    className="text-slate-700 dark:text-slate-300 my-3 leading-relaxed"
+                    className="text-theme-text my-3 leading-relaxed"
                   >
                     {renderFormattedText(trimmed)}
                   </p>
@@ -788,18 +786,18 @@ export function ComparisonView() {
 
       {/* 5. Empty State when no pair selected or no comparison generated yet */}
       {!comparison && !generating && (
-        <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-transparent">
-          <CardContent className="py-12 text-center space-y-3">
-            <GitCompare className="w-12 h-12 text-purple-400 mx-auto" />
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <Card className="border border-dashed border-theme-divider bg-transparent">
+          <CardContent className="py-12 text-center space-y-2">
+            <GitCompare className="w-8 h-8 text-theme-muted mx-auto" strokeWidth={1.5} />
+            <h3 className="text-sm font-medium text-theme-text">
               {sourceId && targetId && sourceId !== targetId
-                ? "No Comparison Report Cached for This Pair"
-                : "Select Two Documents to Begin Comparison"}
+                ? "No cached report for this pair"
+                : "Select two documents to compare"}
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <p className="text-xs text-theme-muted max-w-sm mx-auto leading-relaxed">
               {sourceId && targetId && sourceId !== targetId
-                ? "Click 'Compare Documents' above to run grounded comparative analysis using Gemini 3.8 Flash."
-                : "Choose a Base and Revised document to uncover additions, deletions, term alterations, and numerical differences."}
+                ? "Click 'Compare documents' above to run grounded comparative analysis."
+                : "Choose a baseline and a revised document to identify additions, omissions, and discrepancies."}
             </p>
           </CardContent>
         </Card>
@@ -812,20 +810,15 @@ export function ComparisonView() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-purple-600" />
-              <span>Regenerate Document Comparison?</span>
+            <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+              <RefreshCw className="w-4 h-4 text-theme-muted" strokeWidth={1.5} />
+              <span>Regenerate document comparison?</span>
             </DialogTitle>
-            <DialogDescription className="space-y-2 pt-2">
+            <DialogDescription className="space-y-2 pt-2 text-xs">
               <span>
-                This will invoke Gemini 3.8 Flash again to perform fresh
-                comparative analysis between{" "}
-                <strong>{sourceDoc?.filename || "Base"}</strong> and{" "}
-                <strong>{targetDoc?.filename || "Revised"}</strong>.
-              </span>
-              <span className="block text-xs text-slate-500">
-                DocuMind uses safe regeneration: if the AI request fails, your
-                existing comparison will remain preserved in the database.
+                This will analyze the pair again to update comparative findings between{" "}
+                <strong>{sourceDoc?.filename || "baseline"}</strong> and{" "}
+                <strong>{targetDoc?.filename || "revised"}</strong>.
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -838,12 +831,11 @@ export function ComparisonView() {
               Cancel
             </Button>
             <Button
-              variant="default"
+              variant="ai"
               size="sm"
-              className="bg-purple-600 hover:bg-purple-700 text-white"
               onClick={() => handleCompare(true)}
             >
-              Confirm & Regenerate
+              Regenerate
             </Button>
           </DialogFooter>
         </DialogContent>

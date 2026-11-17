@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import {
   FileText,
@@ -9,38 +9,59 @@ import {
   CheckCircle2,
   ArrowRight,
   UploadCloud,
-  Search,
   MessageSquare,
   GitCompare,
   Layers,
-  Lock,
-  ChevronRight,
-  BookOpen,
-  FileSearch,
-  ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+
+const FEATURES = [
+  {
+    icon: UploadCloud,
+    title: "Multi-format ingestion",
+    description: "Parse PDF, DOCX, TXT, and CSV files with automated text chunking, sliding-window overlap, and page-level metadata tracking.",
+  },
+  {
+    icon: Database,
+    title: "pgvector semantic search",
+    description: "Store 768-dimensional embeddings directly in PostgreSQL. Execute cosine-distance similarity searches in milliseconds.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Grounded RAG with citations",
+    description: "Ask questions and receive answers strictly synthesized from retrieved source chunks, complete with page and paragraph citations.",
+  },
+  {
+    icon: GitCompare,
+    title: "Document comparison",
+    description: "Diff two documents side-by-side. Surface shared themes, unique clauses, and discrepancies with AI-powered comparative analysis.",
+  },
+  {
+    icon: Sparkles,
+    title: "Map-reduce summarization",
+    description: "Generate structured executive summaries for documents of any size using multi-stage hierarchical map-reduce summarization.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Tenant isolation and RBAC",
+    description: "Strict user-scoped vector filtering prevents cross-tenant data leakage. Share documents granularly with read or write permissions.",
+  },
+];
+
+const WORKFLOW_STEPS = [
+  { step: "01", title: "Upload", desc: "Upload PDF, DOCX, TXT, or CSV files. Content is validated, stored, and queued for extraction." },
+  { step: "02", title: "Chunk and embed", desc: "Documents are split into structured chunks and converted into 768-dim embeddings via Gemini." },
+  { step: "03", title: "Index in pgvector", desc: "Embeddings and page metadata are stored in PostgreSQL with indexed vector similarity search." },
+  { step: "04", title: "Retrieve and cite", desc: "User queries retrieve the most relevant passages to synthesize strictly grounded answers." },
+];
 
 export default function HomePage() {
-  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
-  const [searchDemo, setSearchDemo] = useState("");
-  const [selectedFormat, setSelectedFormat] = useState("PDF");
-
   let isLoaded = false;
   let isSignedIn = false;
   try {
@@ -53,538 +74,208 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-x-hidden">
-      {/* Navbar */}
+    <div className="min-h-[100dvh] flex flex-col bg-theme-body text-theme-text">
       <Navbar />
 
       <main className="flex-1">
-        {/* ============================================================ */}
-        {/* 1. HERO SECTION */}
-        {/* ============================================================ */}
-        <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-32">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-            {/* Version Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-800 shadow-2xs animate-in fade-in">
-              <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-500" />
-              <span>DocuMind v1.0 — PostgreSQL pgvector &amp; Grounded RAG Engine</span>
+        {/* Hero Section */}
+        <section className="pt-20 pb-16 md:pt-28 md:pb-24">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-normal bg-theme-panel text-theme-muted border border-theme-divider shadow-2xs">
+              <FileText className="w-3.5 h-3.5 text-theme-primary" strokeWidth={1.5} />
+              <span>PostgreSQL pgvector and grounded RAG platform</span>
             </div>
 
-            {/* Headline */}
-            <div className="space-y-4 max-w-4xl mx-auto">
-              <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.15] text-slate-900 dark:text-white">
-                Document Intelligence with{" "}
-                <span className="text-blue-600 dark:text-blue-500">
-                  Verifiable Citations.
-                </span>
+            <div className="space-y-4 max-w-3xl mx-auto">
+              <h1 className="text-4xl sm:text-5xl font-medium tracking-tight text-theme-text leading-tight">
+                Document intelligence with verifiable citations
               </h1>
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Ingest PDF, DOCX, CSV, and TXT documents into a pgvector index. Run semantic search, synthesize grounded answers with exact page-level citations, and diff document revisions side-by-side.
+              <p className="text-base sm:text-lg text-theme-muted max-w-2xl mx-auto leading-relaxed">
+                Ingest documents, index semantic embeddings in PostgreSQL, and ask questions with confidence. Every claim links back to exact source passages.
               </p>
             </div>
 
-            {/* CTA Group */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               {isLoaded && isSignedIn ? (
-                <Button size="lg" className="w-full sm:w-auto gap-2 shadow-sm" asChild>
+                <Button size="md" className="w-full sm:w-auto gap-2 bg-theme-primary text-theme-primaryBtn hover:bg-theme-primaryHover" asChild>
                   <Link href="/dashboard">
-                    Open Workspace
-                    <ArrowRight className="w-4 h-4" />
+                    Open workspace
+                    <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
                   </Link>
                 </Button>
               ) : (
                 <>
-                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-sm" asChild>
+                  <Button size="md" className="w-full sm:w-auto gap-2 bg-theme-primary text-theme-primaryBtn hover:bg-theme-primaryHover" asChild>
                     <Link href="/sign-up">
-                      Get Started Free
-                      <ArrowRight className="w-4 h-4" />
+                      Get started
+                      <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
                     </Link>
                   </Button>
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2" asChild>
-                    <Link href="/sign-in">
-                      Sign In to Account
-                    </Link>
+                  <Button variant="outline" size="md" className="w-full sm:w-auto border-theme-divider text-theme-text hover:bg-theme-panel" asChild>
+                    <Link href="/sign-in">Sign in</Link>
                   </Button>
                 </>
               )}
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto gap-2"
-                onClick={() => setDemoDialogOpen(true)}
-              >
-                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-500" />
-                Interactive Product Tour
-              </Button>
             </div>
 
-            {/* Supported Document Types Ticker */}
-            <div className="pt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Supported Formats:</span>
-              {["PDF", "DOCX", "TXT", "CSV"].map((fmt) => (
-                <button
-                  key={fmt}
-                  onClick={() => setSelectedFormat(fmt)}
-                  className={`px-2.5 py-1 rounded-md font-mono border transition-all ${
-                    selectedFormat === fmt
-                      ? "bg-blue-600 text-white border-blue-600 font-bold"
-                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-400"
-                  }`}
-                >
-                  .{fmt.toLowerCase()}
-                </button>
+            {/* Architecture Overview Card */}
+            <div className="pt-10 max-w-4xl mx-auto">
+              <div className="rounded-xl border border-theme-divider bg-theme-panel p-6 text-left shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-theme-divider pb-4 mb-5">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-theme-muted" strokeWidth={1.5} />
+                    <span className="font-medium text-sm text-theme-text">Retrieval pipeline</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-theme-muted">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>pgvector active • Gemini 3.8 Flash</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3.5 rounded-lg bg-theme-body border border-theme-divider space-y-1">
+                    <span className="font-medium text-theme-text block">1. Ingest and parse</span>
+                    <p className="text-theme-muted">PDF, DOCX, TXT, CSV parsing with layout and table extraction.</p>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-theme-body border border-theme-divider space-y-1">
+                    <span className="font-medium text-theme-text block">2. Chunk and embed</span>
+                    <p className="text-theme-muted">Sliding-window token chunks embedded into 768-dim vectors.</p>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-theme-body border border-theme-divider space-y-1">
+                    <span className="font-medium text-theme-text block">3. Similarity search</span>
+                    <p className="text-theme-muted">Cosine distance lookup scoped to authenticated user documents.</p>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-theme-body border border-theme-divider space-y-1">
+                    <span className="font-medium text-theme-text block">4. Synthesize and cite</span>
+                    <p className="text-theme-muted">Grounded answers returned with verifiable page and paragraph tags.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Core Capabilities */}
+        <section id="features" className="py-16 border-t border-theme-divider bg-theme-panel">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+              <Badge variant="secondary" className="font-normal text-xs">Capabilities</Badge>
+              <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-theme-text">
+                Built for precision, transparency, and scale
+              </h2>
+              <p className="text-theme-muted text-sm">
+                Multi-format extraction pipelines with PostgreSQL vector embeddings to deliver answers you can verify.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {FEATURES.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <Card key={feature.title} className="p-5 space-y-2 border-theme-divider bg-theme-panel shadow-2xs">
+                    <div className="h-8 w-8 rounded-md bg-theme-body border border-theme-divider text-theme-primary flex items-center justify-center mb-2">
+                      <Icon className="w-4 h-4" strokeWidth={1.5} />
+                    </div>
+                    <CardTitle className="text-sm font-medium text-theme-text">{feature.title}</CardTitle>
+                    <CardDescription className="text-xs leading-relaxed text-theme-muted">
+                      {feature.description}
+                    </CardDescription>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Pipeline Steps */}
+        <section id="how-it-works" className="py-16 border-t border-theme-divider bg-theme-body">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+              <Badge variant="secondary" className="font-normal text-xs">Pipeline</Badge>
+              <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-theme-text">How DocuMind works</h2>
+              <p className="text-theme-muted text-sm">
+                From raw document to cited intelligence in four transparent stages.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {WORKFLOW_STEPS.map((step) => (
+                <div key={step.step} className="p-5 rounded-xl bg-theme-panel border border-theme-divider space-y-2 shadow-2xs">
+                  <span className="text-xs font-mono font-medium text-theme-muted tabular-nums">{step.step}</span>
+                  <h3 className="font-medium text-sm text-theme-text">{step.title}</h3>
+                  <p className="text-xs text-theme-muted leading-relaxed">{step.desc}</p>
+                </div>
               ))}
             </div>
+          </div>
+        </section>
 
-            {/* ============================================================ */}
-            {/* HERO VISUAL MOCKUP: RAG Q&A WITH CITATIONS */}
-            {/* ============================================================ */}
-            <div className="pt-10 max-w-5xl mx-auto">
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 shadow-2xl overflow-hidden backdrop-blur-md">
-                {/* Browser-style Chrome bar */}
-                <div className="h-10 px-4 bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-400/80" />
-                    <div className="w-3 h-3 rounded-full bg-amber-400/80" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
-                  </div>
-                  <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Lock className="w-3 h-3 text-emerald-500" />
-                    documind.app/dashboard/chat
-                  </div>
-                  <div className="text-xs text-slate-400">pgvector RAG session</div>
-                </div>
+        {/* Security & Isolation */}
+        <section id="security" className="py-16 border-t border-theme-divider bg-theme-panel">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="rounded-xl border border-theme-divider bg-theme-body p-6 sm:p-8">
+              <div className="max-w-2xl space-y-4">
+                <Badge variant="outline" className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-normal text-xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.5} />
+                  Security and isolation
+                </Badge>
+                <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-theme-text">
+                  Tenant isolation by design
+                </h2>
+                <p className="text-sm text-theme-muted leading-relaxed">
+                  DocuMind strictly enforces user and organization boundary controls across all storage and query layers:
+                </p>
 
-                {/* Mockup Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-12 min-h-[380px] text-left">
-                  {/* Left Column: Uploaded Document Context */}
-                  <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-5 bg-slate-50/50 dark:bg-slate-950/40 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Document</span>
-                      <Badge variant="success" className="text-[10px]">Indexed</Badge>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl border border-blue-200/80 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/30 flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-blue-600 text-white shrink-0">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold truncate">FY2026_Q3_Financial_Review.pdf</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">38 Pages • 248 Chunks • 768-dim (pgvector)</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-500">Document Highlights</p>
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
-                        <span className="font-semibold text-slate-900 dark:text-slate-200">Executive Summary:</span> Revenue grew 24% YoY with gross margins expanding 320 bps.
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
-                        <span className="font-semibold text-slate-900 dark:text-slate-200">Risk Factors:</span> Supply chain lead times extended by 18 days in APAC region.
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Grounded AI Q&A with Citations */}
-                  <div className="md:col-span-8 p-6 flex flex-col justify-between space-y-6">
-                    <div className="space-y-4">
-                      {/* User Message */}
-                      <div className="flex items-start gap-3 justify-end">
-                        <div className="max-w-md rounded-2xl rounded-tr-sm bg-blue-600 text-white px-4 py-3 text-sm shadow-sm">
-                          What was the operating margin in Q3, and what caused the expansion?
-                        </div>
-                      </div>
-
-                      {/* AI Response with Source Citations */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div className="max-w-lg space-y-3">
-                          <div className="rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm space-y-2 shadow-sm">
-                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                              In Q3 FY2026, the operating margin reached <strong className="text-blue-600 dark:text-blue-400">28.4%</strong>, representing a 320 basis point expansion year-over-year.
-                            </p>
-                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-xs">
-                              The primary drivers cited include:
-                            </p>
-                            <ul className="list-disc pl-4 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                              <li>Automated cloud optimization reducing infrastructure overhead by 14%.</li>
-                              <li>Shift toward enterprise recurring contracts with higher gross margins.</li>
-                            </ul>
-
-                            {/* Citations Box */}
-                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
-                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                                Verified Citations:
-                              </span>
-                              <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
-                                <BookOpen className="w-3 h-3 text-blue-500" />
-                                Page 14, ¶ 3 (Score: 0.94)
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
-                                <BookOpen className="w-3 h-3 text-blue-500" />
-                                Page 19, Table 4.1
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chat Input Bar Mock */}
-                    <div className="relative pt-2">
-                      <Input
-                        placeholder="Ask anything about this document..."
-                        value={searchDemo}
-                        onChange={(e) => setSearchDemo(e.target.value)}
-                        className="pr-12 text-xs sm:text-sm h-11 bg-slate-50 dark:bg-slate-950"
-                      />
-                      <Button size="icon" className="absolute right-1 bottom-1 h-9 w-9">
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <ul className="space-y-2.5 text-xs text-theme-muted">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={1.5} />
+                    <span><strong className="font-medium text-theme-text">User-level isolation:</strong> Every database query and vector similarity lookup is strictly filtered by the authenticated user ID or active permission grants.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={1.5} />
+                    <span><strong className="font-medium text-theme-text">Zero cross-tenant leakage:</strong> Document chunks, vectors, and chat histories cannot be accessed by unauthorized users under any circumstances.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" strokeWidth={1.5} />
+                    <span><strong className="font-medium text-theme-text">Granular permissions:</strong> Share specific documents with individual users with read or write rights while preserving complete privacy for the rest of your vault.</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ============================================================ */}
-        {/* 2. CORE FEATURES & CONCEPTS */}
-        {/* ============================================================ */}
-        <section id="features" className="py-20 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-              <Badge variant="secondary">Core Capabilities</Badge>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Built for Precision, Transparency, and Scale
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
-                DocuMind combines modern text extraction pipelines with PostgreSQL vector embeddings to deliver answers you can trust and verify.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Concept 1: Ingestion & Extraction */}
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
-                    <UploadCloud className="w-6 h-6" />
-                  </div>
-                  <CardTitle>Multi-Format Ingestion</CardTitle>
-                  <CardDescription>
-                    Native parsing for PDF, DOCX, TXT, and CSV documents with metadata preservation and structure awareness.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-xs text-slate-500 space-y-2">
-                  <p>• Automated text chunking with sliding window overlap.</p>
-                  <p>• Robust handling of document tables and structured CSV rows.</p>
-                  <p>• Status indicators: Pending → Processing → Completed.</p>
-                </CardContent>
-              </Card>
-
-              {/* Concept 2: Vector Search & Citations */}
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4">
-                    <Database className="w-6 h-6" />
-                  </div>
-                  <CardTitle>Vector Search & Citations</CardTitle>
-                  <CardDescription>
-                    PostgreSQL with pgvector performs semantic similarity lookups across thousands of chunks in milliseconds.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-xs text-slate-500 space-y-2">
-                  <p>• Cosine distance ranking ensures top context relevance.</p>
-                  <p>• Every answer links directly to the exact page and paragraph.</p>
-                  <p>• Zero hallucinations: AI strictly relies on retrieved source chunks.</p>
-                </CardContent>
-              </Card>
-
-              {/* Concept 3: Multi-Document Knowledge & Comparison */}
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-4">
-                    <GitCompare className="w-6 h-6" />
-                  </div>
-                  <CardTitle>Document Comparison</CardTitle>
-                  <CardDescription>
-                    Select two documents and generate instant comparative intelligence highlighting key differences and agreements.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-xs text-slate-500 space-y-2">
-                  <p>• Contrast contract revisions, proposals, or annual reports.</p>
-                  <p>• Automated extraction of key dates, metrics, and action items.</p>
-                  <p>• Side-by-side discrepancy identification.</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* ============================================================ */}
-        {/* 3. HOW IT WORKS (STEPPER) */}
-        {/* ============================================================ */}
-        <section id="how-it-works" className="py-20 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-              <Badge variant="secondary">The Workflow</Badge>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">How DocuMind Works</h2>
-              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
-                From raw file to grounded intelligence in four transparent steps.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-              <div className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                  1
-                </div>
-                <h3 className="font-semibold text-base">Secure Upload</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Upload PDF, DOCX, TXT, or CSV files. Files are verified for type and size, stored securely, and tied to your user ID.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                  2
-                </div>
-                <h3 className="font-semibold text-base">Text Chunking</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Documents are extracted and split into semantic chunks with context-preserving overlaps and page tracking.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                  3
-                </div>
-                <h3 className="font-semibold text-base">Vector Embeddings</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Mathematical embeddings are generated for each chunk and indexed inside PostgreSQL with the pgvector extension.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                  4
-                </div>
-                <h3 className="font-semibold text-base">Grounded RAG</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Your question retrieves the closest matching chunks. The AI answers exclusively with that context and cites every claim.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============================================================ */}
-        {/* 4. SECURITY & DATA ISOLATION */}
-        {/* ============================================================ */}
-        <section id="security" className="py-20 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 p-8 sm:p-12 overflow-hidden shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="space-y-6">
-                  <Badge variant="outline" className="gap-1.5 border-emerald-300 text-emerald-700 dark:text-emerald-400">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                    Enterprise Security Standard
-                  </Badge>
-                  <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                    Your Documents Remain Strictly Private
-                  </h2>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                    DocuMind is engineered with a strict principle: <strong>A user must never be able to retrieve documents or chunks belonging to another user.</strong>
-                  </p>
-
-                  <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                    <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span><strong>User-Level Isolation:</strong> Every database and vector search query filters strictly by authenticated user ID.</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span><strong>Granular Permissions:</strong> Share documents explicitly with read or write permissions without leaking private vaults.</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span><strong>Role-Based Access:</strong> Administrator controls for system health monitoring without compromising user confidentiality.</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <span className="text-xs font-semibold uppercase text-slate-400">Vector Isolation Policy</span>
-                    <Badge variant="success" className="text-[10px]">Active</Badge>
-                  </div>
-                  <div className="font-mono text-xs p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-300 space-y-1 overflow-x-auto">
-                    <p className="text-blue-600 dark:text-blue-400">SELECT content, page_number, 1 - (embedding &lt;=&gt; query_vector) AS score</p>
-                    <p className="text-slate-500">FROM document_chunks</p>
-                    <p className="text-emerald-600 dark:text-emerald-400">WHERE document_id IN (SELECT id FROM documents WHERE user_id = :auth_user)</p>
-                    <p className="text-purple-600 dark:text-purple-400">ORDER BY embedding &lt;=&gt; query_vector LIMIT 4;</p>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Enforced at SQL query level: No vector search executes without authenticated tenant scoping.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============================================================ */}
-        {/* 5. CALL TO ACTION SECTION */}
-        {/* ============================================================ */}
-        <section className="py-20 border-t border-slate-200 dark:border-slate-800 text-center">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Ready to Interact with Your Documents?
+        {/* CTA */}
+        <section className="py-16 border-t border-theme-divider bg-theme-body text-center">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+            <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-theme-text">
+              Ready to interact with your documents?
             </h2>
-            <p className="text-slate-600 dark:text-slate-400 text-base max-w-xl mx-auto">
-              DocuMind empowers you to extract answers, summarize agreements, and compare complex documents with verifiable accuracy.
+            <p className="text-theme-muted text-sm max-w-lg mx-auto">
+              Extract insights, summarize long reports, and compare documents with verifiable accuracy.
             </p>
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               {isLoaded && isSignedIn ? (
-                <>
-                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-blue-500/25" asChild>
-                    <Link href="/dashboard">
-                      Launch DocuMind Workspace
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full sm:w-auto gap-2"
-                    asChild
-                  >
-                    <Link href="/documents">
-                      Browse Document Vault
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                </>
+                <Button size="md" className="w-full sm:w-auto gap-2 bg-theme-primary text-theme-primaryBtn hover:bg-theme-primaryHover" asChild>
+                  <Link href="/dashboard">
+                    Launch workspace
+                    <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+                  </Link>
+                </Button>
               ) : (
-                <>
-                  <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-blue-500/25" asChild>
-                    <Link href="/sign-up">
-                      Get Started Free
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full sm:w-auto gap-2"
-                    asChild
-                  >
-                    <Link href="/sign-in">
-                      Sign In to Account
-                    </Link>
-                  </Button>
-                </>
+                <Button size="md" className="w-full sm:w-auto gap-2 bg-theme-primary text-theme-primaryBtn hover:bg-theme-primaryHover" asChild>
+                  <Link href="/sign-up">
+                    Get started
+                    <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+                  </Link>
+                </Button>
               )}
             </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <Footer />
-
-      {/* ============================================================ */}
-      {/* INTERACTIVE PRODUCT TOUR MODAL (Verifiable Grounded Citations) */}
-      {/* ============================================================ */}
-      <Dialog open={demoDialogOpen} onOpenChange={setDemoDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <div className="flex items-center gap-2 mb-1 text-blue-600 dark:text-blue-400">
-              <FileSearch className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Product Tour</span>
-            </div>
-            <DialogTitle>Grounded RAG with Verifiable Citations</DialogTitle>
-            <DialogDescription>
-              Every answer generated in DocuMind is strictly anchored to your uploaded document passages with zero hallucinations.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2 text-xs">
-            {/* Context Header */}
-            <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5 truncate">
-                <div className="p-1.5 rounded-lg bg-blue-600 text-white shrink-0">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div className="truncate">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                    Enterprise_Service_Agreement_2026.pdf
-                  </p>
-                  <p className="text-[10px] text-slate-400">pgvector chunking • 768-dim embeddings</p>
-                </div>
-              </div>
-              <Badge variant="success" className="text-[10px] shrink-0">Indexed</Badge>
-            </div>
-
-            {/* Q&A Simulation */}
-            <div className="space-y-2.5">
-              <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/40 text-blue-900 dark:text-blue-200">
-                <span className="font-semibold text-[11px] uppercase tracking-wide text-blue-600 dark:text-blue-400 block mb-1">
-                  Sample Query:
-                </span>
-                &quot;What is the maximum liability limit and indemnification exception?&quot;
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300 leading-relaxed shadow-xs">
-                <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold text-[11px]">
-                  <FileText className="w-3.5 h-3.5" />
-                  DocuMind Synthesized Answer
-                </div>
-                <p>
-                  Total cumulative liability is capped at <strong>2x the annual contract value</strong> for standard breaches{" "}
-                  <Badge variant="secondary" className="text-[9px] py-0 px-1 font-mono align-baseline">
-                    # SOURCE 1
-                  </Badge>
-                  . Gross negligence, willful misconduct, and confidentiality breaches are expressly uncapped{" "}
-                  <Badge variant="secondary" className="text-[9px] py-0 px-1 font-mono align-baseline">
-                    # SOURCE 2
-                  </Badge>
-                  .
-                </p>
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 text-[10px] text-slate-400">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>Cross-checked against Section 14.1 & 14.3 (95.8% similarity score)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <DialogClose asChild>
-              <Button variant="outline">Close Tour</Button>
-            </DialogClose>
-            {isLoaded && isSignedIn ? (
-              <Button size="md" className="gap-1.5 shadow-sm" asChild>
-                <Link href="/dashboard">
-                  Explore Workspace
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-            ) : (
-              <Button size="md" className="gap-1.5 shadow-sm" asChild>
-                <Link href="/sign-up">
-                  Get Started Free
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

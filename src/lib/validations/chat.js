@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Validation schema for Phase 9 Question Answering requests.
+ * Validation schema for Question Answering chat requests.
  * Enforces boundaries:
  * - question: non-empty trimmed string, 1 to 2,000 characters
  * - documentId: optional valid UUID (scoped single-document query)

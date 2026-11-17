@@ -52,7 +52,7 @@ export async function searchDocumentChunks({
     throw new Error("Search query cannot be empty or whitespace only.");
   }
 
-  // 1. Generate query embedding using the Phase 7 Gemini client (gemini-embedding-001) or use provided queryVector
+  // 1. Generate query embedding using Gemini (gemini-embedding-001) or use provided queryVector
   const resolvedVector = queryVector || (await generateEmbedding(query.trim()));
 
   // 2. Strict dimension validation before querying database

@@ -143,7 +143,7 @@ export async function POST(req) {
       existingConversation = conv;
     }
 
-    // 3. Perform vector retrieval using Phase 8 engine
+    // 3. Perform vector retrieval
     const retrievedChunks = await searchDocumentChunks({
       query: question,
       userId,
@@ -219,7 +219,7 @@ export async function POST(req) {
       });
     }
 
-    // 5. Assemble RAG context using Phase 8 assembler
+    // 5. Assemble RAG context
     const {
       contextText,
       sources,

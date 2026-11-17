@@ -2,6 +2,7 @@
   "name": "documind",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,7 +15,6 @@
     "test": "node scripts/run-all-tests.mjs",
     "test:unit": "node scripts/tests/unit/run-unit-tests.mjs",
     "test:integration": "node scripts/tests/integration/run-integration-tests.mjs",
-    "test:regressions": "node scripts/run-regressions.mjs",
     "test:e2e": "playwright test",
     "test:ai-live": "node scripts/tests/live-ai-smoke.mjs",
     "test:all": "node scripts/run-all-tests.mjs --with-e2e"

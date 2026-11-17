@@ -1,6 +1,6 @@
-const { defineConfig } = require("drizzle-kit");
+import { defineConfig } from "drizzle-kit";
 
-module.exports = defineConfig({
+export default defineConfig({
   schema: "./src/db/schema.js",
   out: "./drizzle",
   dialect: "postgresql",

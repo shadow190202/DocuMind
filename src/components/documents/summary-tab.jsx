@@ -106,7 +106,7 @@ export function renderFormattedText(text) {
     seg.bold ? (
       <strong
         key={`bold-${idx}`}
-        className="font-semibold text-slate-900 dark:text-slate-100"
+        className="font-semibold text-theme-text"
       >
         {seg.text}
       </strong>
@@ -230,7 +230,7 @@ export function SummaryTab({ documentId, document }) {
   return (
     <div className="space-y-6">
       {/* Dimension Pill Navigation */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-theme-body rounded-xl border border-theme-divider">
         {SUMMARY_DIMENSIONS.map((dim) => {
           const Icon = dim.icon;
           const isSelected = activeType === dim.id;
@@ -245,8 +245,8 @@ export function SummaryTab({ documentId, document }) {
               }}
               className={`flex items-center gap-2 px-3.5 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${
                 isSelected
-                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/80 dark:border-slate-700/80"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50"
+                  ? "bg-theme-panel text-theme-aiAccent shadow-xs border border-theme-divider"
+                  : "text-theme-muted hover:text-theme-text hover:bg-theme-panel/50"
               }`}
             >
               <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -332,10 +332,10 @@ export function SummaryTab({ documentId, document }) {
 
       {/* Loading Skeleton */}
       {loading && !activeSummary && (
-        <Card className="border-slate-200 dark:border-slate-800">
+        <Card className="border-theme-divider">
           <CardContent className="py-16 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <Loader2 className="w-8 h-8 animate-spin text-theme-primary mx-auto mb-3" />
+            <p className="text-sm font-medium text-theme-text">
               Loading document summaries...
             </p>
           </CardContent>
@@ -344,16 +344,16 @@ export function SummaryTab({ documentId, document }) {
 
       {/* Generating State */}
       {generating && (
-        <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/20">
+        <Card className="border-theme-ai/30 bg-theme-ai/10">
           <CardContent className="py-16 text-center space-y-3">
             <div className="relative inline-flex">
-              <div className="w-12 h-12 rounded-full border-2 border-blue-500/20 border-t-blue-600 animate-spin mx-auto" />
-              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              <div className="w-12 h-12 rounded-full border-2 border-theme-ai/20 border-t-theme-ai animate-spin mx-auto" />
+              <FileText className="w-5 h-5 text-theme-aiAccent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             </div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h3 className="text-base font-semibold text-theme-text">
               Synthesizing {activeDimension.title}
             </h3>
-            <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+            <p className="text-xs md:text-sm text-theme-muted max-w-md mx-auto">
               Analyzing document text with Gemini 3.8 Flash. Extracting grounded facts, figures, and key takeaways strictly from source content...
             </p>
           </CardContent>
@@ -362,16 +362,16 @@ export function SummaryTab({ documentId, document }) {
 
       {/* Empty State: No Summary Generated for this Dimension */}
       {!loading && !generating && !activeSummary && (
-        <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+        <Card className="border-dashed border-2 border-theme-divider bg-theme-body/50">
           <CardContent className="py-16 text-center max-w-lg mx-auto space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-theme-ai/10 border border-theme-ai/20 text-theme-aiAccent flex items-center justify-center mx-auto shadow-xs">
               <activeDimension.icon className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-base font-semibold text-theme-text">
                 {activeDimension.title}
               </h3>
-              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs md:text-sm text-theme-muted mt-1">
                 {activeDimension.description}
               </p>
             </div>
@@ -382,8 +382,9 @@ export function SummaryTab({ documentId, document }) {
               </div>
             ) : (
               <Button
+                variant="ai"
                 onClick={() => handleGenerate(false)}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                className="shadow-sm"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Generate {activeDimension.label} Summary
@@ -395,17 +396,17 @@ export function SummaryTab({ documentId, document }) {
 
       {/* Active Summary View */}
       {!generating && activeSummary && (
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 pb-4">
+        <Card className="border-theme-divider shadow-sm">
+          <CardHeader className="border-b border-theme-divider pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <activeDimension.icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <activeDimension.icon className="w-5 h-5 text-theme-aiAccent" />
+                  <CardTitle className="text-lg font-bold text-theme-text">
                     {activeDimension.title}
                   </CardTitle>
                 </div>
-                <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <CardDescription className="text-xs text-theme-muted mt-1">
                   {activeDimension.description}
                 </CardDescription>
               </div>
@@ -447,7 +448,7 @@ export function SummaryTab({ documentId, document }) {
                   size="sm"
                   variant="outline"
                   onClick={() => setShowRegenerateDialog(true)}
-                  className="text-xs gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs"
+                  className="text-xs gap-1.5 hover:text-theme-aiAccent shadow-xs"
                   title="Regenerate summary with Gemini"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -457,7 +458,7 @@ export function SummaryTab({ documentId, document }) {
             </div>
 
             {/* Metadata Bar */}
-            <div className="flex flex-wrap items-center gap-2 pt-3 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 pt-3 text-xs text-theme-muted">
               <Badge variant="secondary" className="gap-1 font-normal text-[11px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
                 <Zap className="w-3 h-3 text-emerald-500" />
                 Cached (0 new Gemini tokens)
@@ -472,12 +473,12 @@ export function SummaryTab({ documentId, document }) {
                   {activeSummary.totalTokens.toLocaleString()} tokens
                 </Badge>
               ) : (
-                <Badge variant="outline" className="font-normal text-[11px] text-slate-400">
+                <Badge variant="outline" className="font-normal text-[11px] text-theme-muted">
                   Tokens unavailable
                 </Badge>
               )}
 
-              <span className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 ml-auto">
+              <span className="flex items-center gap-1 text-[11px] text-theme-muted ml-auto">
                 <Clock className="w-3 h-3" />
                 {new Date(activeSummary.updatedAt || activeSummary.createdAt).toLocaleString()}
               </span>
@@ -486,7 +487,7 @@ export function SummaryTab({ documentId, document }) {
 
           {/* Formatted Markdown Content */}
           <CardContent className="pt-6">
-            <div className="prose prose-slate dark:prose-invert max-w-none text-sm md:text-base leading-relaxed break-words">
+            <div className="max-w-none text-sm md:text-base leading-relaxed break-words text-theme-text">
               {activeSummary.content.split("\n\n").map((block, idx) => {
                 const trimmed = block.trim();
                 if (!trimmed) return null;
@@ -510,16 +511,16 @@ export function SummaryTab({ documentId, document }) {
                   return (
                     <div
                       key={idx}
-                      className="my-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm"
+                      className="my-4 overflow-x-auto rounded-lg border border-theme-divider shadow-xs"
                     >
                       <table className="w-full text-left text-xs md:text-sm border-collapse">
-                        <thead className="bg-slate-50 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-800">
+                        <thead className="bg-theme-body text-theme-text font-semibold border-b border-theme-divider">
                           {headerLines.map((hLine, hIdx) => (
                             <tr key={`th-row-${hIdx}`}>
                               {parseTableCells(hLine).map((cell, cIdx) => (
                                 <th
                                   key={`th-${cIdx}`}
-                                  className="px-3.5 py-2.5 font-semibold text-slate-900 dark:text-slate-100"
+                                  className="px-3.5 py-2.5 font-semibold text-theme-text"
                                 >
                                   {renderFormattedText(cell)}
                                 </th>
@@ -527,11 +528,11 @@ export function SummaryTab({ documentId, document }) {
                             </tr>
                           ))}
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                        <tbody className="divide-y divide-theme-divider text-theme-text">
                           {bodyLines.map((bLine, bIdx) => (
                             <tr
                               key={`tb-row-${bIdx}`}
-                              className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors"
+                              className="hover:bg-theme-body/50 transition-colors"
                             >
                               {parseTableCells(bLine).map((cell, cIdx) => (
                                 <td key={`td-${cIdx}`} className="px-3.5 py-2">
@@ -549,21 +550,21 @@ export function SummaryTab({ documentId, document }) {
                 // Headers
                 if (trimmed.startsWith("### ")) {
                   return (
-                    <h3 key={idx} className="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 mb-2">
+                    <h3 key={idx} className="text-base font-bold text-theme-text mt-5 mb-2">
                       {renderFormattedText(trimmed.replace(/^###\s+/, ""))}
                     </h3>
                   );
                 }
                 if (trimmed.startsWith("## ")) {
                   return (
-                    <h2 key={idx} className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-6 mb-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+                    <h2 key={idx} className="text-lg font-bold text-theme-text mt-6 mb-3 pb-1 border-b border-theme-divider">
                       {renderFormattedText(trimmed.replace(/^##\s+/, ""))}
                     </h2>
                   );
                 }
                 if (trimmed.startsWith("# ")) {
                   return (
-                    <h1 key={idx} className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-6 mb-3">
+                    <h1 key={idx} className="text-xl font-bold text-theme-text mt-6 mb-3">
                       {renderFormattedText(trimmed.replace(/^#\s+/, ""))}
                     </h1>
                   );
@@ -573,7 +574,7 @@ export function SummaryTab({ documentId, document }) {
                 if (trimmed.split("\n").some((l) => l.trim().startsWith("- ") || l.trim().startsWith("* "))) {
                   const items = trimmed.split("\n").filter((l) => l.trim().length > 0);
                   return (
-                    <ul key={idx} className="space-y-1.5 my-3 list-disc pl-5 text-slate-700 dark:text-slate-300">
+                    <ul key={idx} className="space-y-1.5 my-3 list-disc pl-5 text-theme-text">
                       {items.map((it, itIdx) => (
                         <li key={itIdx}>
                           {renderFormattedText(it.replace(/^[-*]\s+/, ""))}
@@ -585,7 +586,7 @@ export function SummaryTab({ documentId, document }) {
 
                 // Standard Paragraph
                 return (
-                  <p key={idx} className="text-slate-700 dark:text-slate-300 my-3 leading-relaxed">
+                  <p key={idx} className="text-theme-text my-3 leading-relaxed">
                     {renderFormattedText(trimmed)}
                   </p>
                 );
@@ -600,10 +601,10 @@ export function SummaryTab({ documentId, document }) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-blue-600" />
+              <RefreshCw className="w-5 h-5 text-theme-aiAccent" />
               Regenerate {activeDimension.title}?
             </DialogTitle>
-            <DialogDescription className="pt-2 text-sm text-slate-600 dark:text-slate-400">
+            <DialogDescription className="pt-2 text-sm text-theme-muted">
               Regenerating will submit a new synthesis request to Gemini 3.8 Flash and consume free-tier quota.
               Your existing summary will only be replaced if the new generation succeeds.
             </DialogDescription>
@@ -617,8 +618,8 @@ export function SummaryTab({ documentId, document }) {
             </DialogClose>
             <Button
               size="sm"
+              variant="ai"
               onClick={() => handleGenerate(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Confirm & Regenerate
             </Button>

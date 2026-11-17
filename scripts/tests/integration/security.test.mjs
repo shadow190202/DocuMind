@@ -10,7 +10,7 @@ import { checkRateLimit, resetRateLimits } from "../../../src/lib/rate-limiter.j
 import { sanitizeLogString, handleApiError } from "../../../src/lib/errors.js";
 
 export async function run() {
-  console.log("\n--- Integration Tests: Phase 15 Security Hardening Invariants ---");
+  console.log("\n--- Integration Tests: Security & Hardening Invariants ---");
   let passed = 0;
   resetRateLimits();
 
@@ -93,12 +93,12 @@ export async function run() {
   return { passed, failed: 0 };
 }
 
-if (process.argv[1]?.endsWith("security-phase15.test.mjs")) {
+if (process.argv[1]?.endsWith("security.test.mjs")) {
   run().then((r) => {
-    console.log(`\nPhase 15 Security integration tests passed: ${r.passed}`);
+    console.log(`\nSecurity integration tests passed: ${r.passed}`);
     process.exit(0);
   }).catch((err) => {
-    console.error("Phase 15 Security integration tests failed:", err);
+    console.error("Security integration tests failed:", err);
     process.exit(1);
   });
 }
