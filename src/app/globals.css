@@ -6,17 +6,20 @@
   :root {
     color-scheme: light dark;
 
-    --bg-body: light-dark(#fdfbf7, #131715);
-    --bg-panel: light-dark(#ffffff, #1c221e);
-    --border-divider: light-dark(#e6e4df, #354039);
-    --text-main: light-dark(#2d332f, #f4f6f5);
-    --text-muted: light-dark(#6b726d, #a8b5ac);
-    --bg-primary: light-dark(#4a6b53, #7ca187);
-    --bg-primary-hover: light-dark(#3c5743, #8fba9c);
-    --text-primary-btn: light-dark(#ffffff, #0d120f);
-    --bg-ai: light-dark(#c86d51, #e08f76);
-    --bg-ai-hover: light-dark(#b25e44, #eea48e);
-    --text-ai-accent: light-dark(#c86d51, #eea48e);
+    /* Base Fallback Tokens (Light Mode) for engines lacking light-dark() support */
+    --bg-body: #fdfbf7;
+    --bg-panel: #ffffff;
+    --border-divider: #e6e4df;
+    --text-main: #2d332f;
+    --text-muted: #6b726d;
+    --bg-primary: #4a6b53;
+    --bg-primary-hover: #3c5743;
+    --text-primary-btn: #ffffff;
+    --bg-ai: #c86d51;
+    --bg-ai-hover: #b25e44;
+    --text-ai-accent: #c86d51;
+    --ai-surface: #faeedf;
+    --ai-border: #e6cdb3;
 
     /* Legacy component mappings */
     --background: var(--bg-body);
@@ -31,16 +34,79 @@
     --ai: var(--bg-ai);
     --ai-hover: var(--bg-ai-hover);
     --ai-foreground: var(--text-primary-btn);
-    --ai-surface: light-dark(#faeedf, #2a201b);
-    --ai-border: light-dark(#e6cdb3, #4d382d);
   }
 
+  /* Media Query Fallback (Dark Mode) for non-supporting browsers */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-body: #131715;
+      --bg-panel: #1c221e;
+      --border-divider: #354039;
+      --text-main: #f4f6f5;
+      --text-muted: #a8b5ac;
+      --bg-primary: #7ca187;
+      --bg-primary-hover: #8fba9c;
+      --text-primary-btn: #0d120f;
+      --bg-ai: #e08f76;
+      --bg-ai-hover: #eea48e;
+      --text-ai-accent: #eea48e;
+      --ai-surface: #2a201b;
+      --ai-border: #4d382d;
+    }
+  }
+
+  /* Explicit Class-based Fallback for dark theme overrides */
   :root:has(.dark), .dark {
     color-scheme: dark;
+    --bg-body: #131715;
+    --bg-panel: #1c221e;
+    --border-divider: #354039;
+    --text-main: #f4f6f5;
+    --text-muted: #a8b5ac;
+    --bg-primary: #7ca187;
+    --bg-primary-hover: #8fba9c;
+    --text-primary-btn: #0d120f;
+    --bg-ai: #e08f76;
+    --bg-ai-hover: #eea48e;
+    --text-ai-accent: #eea48e;
+    --ai-surface: #2a201b;
+    --ai-border: #4d382d;
   }
 
   :root:has(.light), .light {
     color-scheme: light;
+    --bg-body: #fdfbf7;
+    --bg-panel: #ffffff;
+    --border-divider: #e6e4df;
+    --text-main: #2d332f;
+    --text-muted: #6b726d;
+    --bg-primary: #4a6b53;
+    --bg-primary-hover: #3c5743;
+    --text-primary-btn: #ffffff;
+    --bg-ai: #c86d51;
+    --bg-ai-hover: #b25e44;
+    --text-ai-accent: #c86d51;
+    --ai-surface: #faeedf;
+    --ai-border: #e6cdb3;
+  }
+
+  /* Progressive Enhancement for engines supporting light-dark() */
+  @supports (color: light-dark(#000, #fff)) {
+    :root {
+      --bg-body: light-dark(#fdfbf7, #131715);
+      --bg-panel: light-dark(#ffffff, #1c221e);
+      --border-divider: light-dark(#e6e4df, #354039);
+      --text-main: light-dark(#2d332f, #f4f6f5);
+      --text-muted: light-dark(#6b726d, #a8b5ac);
+      --bg-primary: light-dark(#4a6b53, #7ca187);
+      --bg-primary-hover: light-dark(#3c5743, #8fba9c);
+      --text-primary-btn: light-dark(#ffffff, #0d120f);
+      --bg-ai: light-dark(#c86d51, #e08f76);
+      --bg-ai-hover: light-dark(#b25e44, #eea48e);
+      --text-ai-accent: light-dark(#c86d51, #eea48e);
+      --ai-surface: light-dark(#faeedf, #2a201b);
+      --ai-border: light-dark(#e6cdb3, #4d382d);
+    }
   }
 
   body {
@@ -72,6 +138,10 @@
   }
 
   /* Native HTML5 Popover styling and ::backdrop */
+  [popover]:not(:popover-open) {
+    display: none;
+  }
+
   [popover] {
     margin: 0;
     padding: 0;

@@ -81,6 +81,7 @@ export function ConversationCard({ conversation, onRename, onDelete }) {
             <button
               onClick={() => onRename(conversation)}
               title="Rename conversation"
+              aria-label="Rename conversation"
               className="p-1.5 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -91,6 +92,7 @@ export function ConversationCard({ conversation, onRename, onDelete }) {
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
                 title="Export transcript"
+                aria-label="Export transcript"
                 className="p-1.5 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -117,6 +119,7 @@ export function ConversationCard({ conversation, onRename, onDelete }) {
             <button
               onClick={() => onDelete(conversation)}
               title="Delete conversation"
+              aria-label="Delete conversation"
               className="p-1.5 rounded-lg text-theme-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />

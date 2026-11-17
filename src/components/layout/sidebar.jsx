@@ -307,8 +307,17 @@ export function Sidebar({ className }) {
 
         <div className="p-3 border-t border-theme-divider">
           <SignedIn>
-            <div className={cn("flex items-center gap-3", collapsed ? "justify-center" : "px-2 py-1")}>
-              <UserButton afterSignOutUrl="/" showName={!collapsed} />
+            <div className={cn("flex items-center gap-3 text-theme-muted", collapsed ? "justify-center" : "px-2 py-1")}>
+              <UserButton
+                afterSignOutUrl="/"
+                showName={!collapsed}
+                appearance={{
+                  elements: {
+                    userButtonOuterIdentifier: "text-theme-muted text-xs font-normal tracking-normal truncate max-w-[140px]",
+                    userButtonBox: "text-theme-muted",
+                  },
+                }}
+              />
             </div>
           </SignedIn>
         </div>
@@ -352,8 +361,17 @@ export function Sidebar({ className }) {
 
           <div className="p-3 border-t border-theme-divider shrink-0">
             <SignedIn>
-              <div className="flex items-center gap-3 px-2 py-1">
-                <UserButton afterSignOutUrl="/" showName />
+              <div className="flex items-center gap-3 px-2 py-1 text-theme-muted">
+                <UserButton
+                  afterSignOutUrl="/"
+                  showName
+                  appearance={{
+                    elements: {
+                      userButtonOuterIdentifier: "text-theme-muted text-xs font-normal tracking-normal truncate max-w-[180px]",
+                      userButtonBox: "text-theme-muted",
+                    },
+                  }}
+                />
               </div>
             </SignedIn>
           </div>

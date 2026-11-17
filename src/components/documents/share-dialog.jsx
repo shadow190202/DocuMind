@@ -199,6 +199,7 @@ export function ShareDialog({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoFocus
                   pattern="^[^@\s]+@[^@\s]+\.[^@\s]+$"
                   className="pl-9 bg-theme-panel border-theme-divider text-theme-text placeholder:text-theme-muted text-sm"
                 />

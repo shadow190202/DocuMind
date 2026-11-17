@@ -7,7 +7,7 @@ import {
   createTestUser,
   cleanupTestRunFixtures,
 } from "../../scripts/tests/utils/test-db.js";
-import { documents } from "../../src/db/schema.js";
+import { documents, documentComparisons } from "../../src/db/schema.js";
 
 test.describe("E2E: Document Comparison UI", () => {
   const db = getTestDb();
@@ -44,6 +44,18 @@ test.describe("E2E: Document Comparison UI", () => {
         processingStatus: "completed",
       },
     ]);
+
+    await db.insert(documentComparisons).values({
+      userId: testUserId,
+      sourceDocumentId: docAId,
+      targetDocumentId: docBId,
+      content: "Both documents describe baseline procedures.",
+      structuredData: {
+        sharedThemes: ["Procedures"],
+        differences: ["Version increments"],
+      },
+      model: "gemini-3.8-flash",
+    });
   });
 
   test.afterAll(async () => {
@@ -61,5 +73,30 @@ test.describe("E2E: Document Comparison UI", () => {
     await expect(page).toHaveURL(/\/compare/);
     await expect(page.getByText("Document Comparison").first()).toBeVisible();
     await expect(page.getByText(/Select|Choose|Compare/i).first()).toBeVisible();
+  });
+
+  test("2. Compare view opens native regeneration dialog in Top Layer and closes via Cancel", async ({ page, context }) => {
+    await loginAs(context, {
+      userId: testUserId,
+      email: `${testUserId}@documind.test`,
+      role: "user",
+    });
+
+    await page.goto(`/compare?sourceId=${docAId}&targetId=${docBId}`);
+    await expect(page).toHaveURL(/\/compare/);
+
+    // Locate and click the Regenerate button
+    const regenerateBtn = page.getByRole("button", { name: "Regenerate" }).first();
+    await expect(regenerateBtn).toBeVisible();
+    await regenerateBtn.click();
+
+    // Assert native <dialog> is in Top Layer
+    const dialog = page.locator("dialog[open]");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: /Regenerate document comparison/i })).toBeVisible();
+
+    // Click Cancel to trigger native .close()
+    await dialog.getByRole("button", { name: /Cancel/i }).click();
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
   });
 });

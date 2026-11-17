@@ -605,7 +605,7 @@ export default function DocumentsPage() {
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs">
-              Search semantically across your personal document repository using pgvector cosine similarity and 768-dimensional Gemini embeddings.
+              Search across your personal document repository.
             </DialogDescription>
           </DialogHeader>
 

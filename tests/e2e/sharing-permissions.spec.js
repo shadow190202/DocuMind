@@ -61,7 +61,7 @@ test.describe("E2E: Document Sharing & Permissions UI", () => {
     });
 
     await page.goto("/documents");
-    await expect(page.getByText("project-spec.pdf")).toBeVisible();
+    await expect(page.getByRole("link", { name: "project-spec.pdf" })).toBeVisible();
     await expect(page.getByText(/Owner/i).first()).toBeVisible();
   });
 
@@ -73,7 +73,7 @@ test.describe("E2E: Document Sharing & Permissions UI", () => {
     });
 
     await page.goto("/documents");
-    await expect(page.getByText("project-spec.pdf")).toBeVisible();
+    await expect(page.getByRole("link", { name: "project-spec.pdf" })).toBeVisible();
     await expect(page.getByText(/Shared with me|Viewer|Read/i).first()).toBeVisible();
   });
 });

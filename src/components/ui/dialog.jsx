@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useId,
   forwardRef,
   useImperativeHandle,
 } from "react";
@@ -17,6 +18,8 @@ const DialogContext = createContext({
   open: false,
   setOpen: () => {},
   dialogRef: null,
+  titleId: "",
+  descriptionId: "",
 });
 
 export function Dialog({ children, open: controlledOpen, onOpenChange }) {
@@ -24,6 +27,10 @@ export function Dialog({ children, open: controlledOpen, onOpenChange }) {
   const dialogRef = useRef(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
+
+  const baseId = useId();
+  const titleId = `${baseId}-dialog-title`;
+  const descriptionId = `${baseId}-dialog-description`;
 
   const setOpen = useCallback(
     (value) => {
@@ -37,27 +44,10 @@ export function Dialog({ children, open: controlledOpen, onOpenChange }) {
     [isControlled, onOpenChange]
   );
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (open) {
-      if (!dialog.open) {
-        try {
-          dialog.showModal();
-        } catch {
-          // ignore if already open
-        }
-      }
-    } else {
-      if (dialog.open) {
-        dialog.close();
-      }
-    }
-  }, [open]);
-
   return (
-    <DialogContext.Provider value={{ open, setOpen, dialogRef }}>
+    <DialogContext.Provider
+      value={{ open, setOpen, dialogRef, titleId, descriptionId }}
+    >
       {children}
     </DialogContext.Provider>
   );
@@ -82,15 +72,25 @@ export function DialogTrigger({ children, asChild }) {
   );
 }
 
-export const DialogContent = forwardRef(function DialogContent({ className, children, ...props }, forwardedRef) {
-  const { open, setOpen, dialogRef: contextRef } = useContext(DialogContext);
+export const DialogContent = forwardRef(function DialogContent(
+  { className, children, ...props },
+  forwardedRef
+) {
+  const { open, setOpen, dialogRef: contextRef, titleId, descriptionId } =
+    useContext(DialogContext);
   const internalRef = useRef(null);
   const dialogRef = contextRef || internalRef;
+  const previouslyFocusedElement = useRef(null);
 
   useImperativeHandle(forwardedRef, () => dialogRef.current);
 
   // Exclude `open` prop so it is never passed to <dialog> HTML attributes
-  const { open: _ignoredOpen, ...restProps } = props;
+  const {
+    open: _ignoredOpen,
+    "aria-labelledby": customAriaLabelledBy,
+    "aria-describedby": customAriaDescribedBy,
+    ...restProps
+  } = props;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,6 +99,9 @@ export const DialogContent = forwardRef(function DialogContent({ className, chil
     if (open) {
       if (!dialog.open) {
         try {
+          if (typeof document !== "undefined") {
+            previouslyFocusedElement.current = document.activeElement;
+          }
           dialog.showModal();
         } catch {
           // ignore if already open
@@ -111,6 +114,12 @@ export const DialogContent = forwardRef(function DialogContent({ className, chil
         } catch {
           // ignore if already closed
         }
+        if (
+          previouslyFocusedElement.current &&
+          typeof previouslyFocusedElement.current.focus === "function"
+        ) {
+          previouslyFocusedElement.current.focus();
+        }
       }
     }
 
@@ -120,6 +129,12 @@ export const DialogContent = forwardRef(function DialogContent({ className, chil
           dialog.close();
         } catch {
           // ignore
+        }
+        if (
+          previouslyFocusedElement.current &&
+          typeof previouslyFocusedElement.current.focus === "function"
+        ) {
+          previouslyFocusedElement.current.focus();
         }
       }
     };
@@ -149,6 +164,9 @@ export const DialogContent = forwardRef(function DialogContent({ className, chil
       onClose={handleNativeClose}
       onCancel={handleNativeClose}
       onClick={handleBackdropClick}
+      aria-modal="true"
+      aria-labelledby={customAriaLabelledBy || titleId}
+      aria-describedby={customAriaDescribedBy || descriptionId}
       className={cn(
         "m-auto p-6 bg-theme-panel text-theme-text rounded-2xl border border-theme-divider shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm max-w-lg w-full relative outline-none",
         className
@@ -158,9 +176,10 @@ export const DialogContent = forwardRef(function DialogContent({ className, chil
       <button
         type="button"
         onClick={() => setOpen(false)}
-        className="absolute right-4 top-4 rounded-lg p-1 text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
+        aria-label="Close dialog"
+        className="absolute right-4 top-4 rounded-lg p-1 text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary"
       >
-        <X className="w-5 h-5" />
+        <X className="w-5 h-5" aria-hidden="true" />
         <span className="sr-only">Close</span>
       </button>
       {children}
@@ -169,20 +188,32 @@ export const DialogContent = forwardRef(function DialogContent({ className, chil
 });
 
 export function DialogHeader({ className, children }) {
-  return <div className={cn("flex flex-col space-y-2 text-left mb-4", className)}>{children}</div>;
+  return (
+    <div className={cn("flex flex-col space-y-2 text-left mb-4", className)}>
+      {children}
+    </div>
+  );
 }
 
-export function DialogTitle({ className, children }) {
+export function DialogTitle({ className, id, children }) {
+  const { titleId } = useContext(DialogContext);
   return (
-    <h2 className={cn("text-lg font-semibold text-theme-text", className)}>
+    <h2
+      id={id || titleId}
+      className={cn("text-lg font-semibold text-theme-text", className)}
+    >
       {children}
     </h2>
   );
 }
 
-export function DialogDescription({ className, children }) {
+export function DialogDescription({ className, id, children }) {
+  const { descriptionId } = useContext(DialogContext);
   return (
-    <p className={cn("text-sm text-theme-muted", className)}>
+    <p
+      id={id || descriptionId}
+      className={cn("text-sm text-theme-muted", className)}
+    >
       {children}
     </p>
   );
