@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { StatCard } from "@/components/admin/stat-card";
 import {
@@ -53,13 +53,11 @@ export default function AdminSystemPage() {
   const tableCounts = data?.tableRowCounts || {};
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <Sidebar />
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
-        <AdminHeader
-          title="System Health & Infrastructure Diagnostics"
-          subtitle="Operational diagnostics, database latency, pgvector extension, and storage statistics"
-        />
+    <DashboardLayout>
+      <AdminHeader
+        title="System Health & Infrastructure Diagnostics"
+        subtitle="Operational diagnostics, database latency, pgvector extension, and storage statistics"
+      />
 
         <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           <div className="flex items-center justify-between">
@@ -128,9 +126,9 @@ export default function AdminSystemPage() {
           {/* Configuration & Security Posture */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Lock className="w-4 h-4 text-purple-600" />
-                <span>Security & Environment Sanitization</span>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-500" strokeWidth={1.5} />
+                <span>Security and environment sanitization</span>
               </CardTitle>
               <CardDescription className="text-xs">
                 Zero secrets or filesystem paths are exposed in administrative telemetry responses
@@ -219,7 +217,6 @@ export default function AdminSystemPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

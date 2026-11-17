@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { FileText, Menu, X, ArrowRight, LayoutDashboard } from "lucide-react";
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
-export function Navbar({ onOpenDemoModal }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+export function Navbar() {
   let isLoaded = false;
   let isSignedIn = false;
   try {
@@ -21,62 +19,56 @@ export function Navbar({ onOpenDemoModal }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/80 transition-colors">
-      <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 w-full border-b border-theme-divider bg-theme-panel/95 backdrop-blur-md text-theme-text transition-colors">
+      <div className="max-w-7xl mx-auto flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 font-bold text-xl tracking-tight group">
-          <div className="h-9 w-9 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs group-hover:scale-105 transition-transform">
-            <FileText className="w-5 h-5" />
+        <Link href="/" className="flex items-center gap-2.5 font-semibold text-base tracking-tight text-theme-text">
+          <div className="h-7 w-7 rounded-md bg-theme-text flex items-center justify-center text-theme-panel shadow-xs">
+            <FileText className="w-4 h-4" strokeWidth={1.5} />
           </div>
-          <span>
-            Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>
+          <span className="text-theme-text">
+            Docu<span className="text-theme-primary">Mind</span>
           </span>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600 dark:text-slate-300">
-          <a href="#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-theme-muted">
+          <a href="#features" className="hover:text-theme-text transition-colors">
             Features
           </a>
-          <a href="#how-it-works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            How It Works
+          <a href="#how-it-works" className="hover:text-theme-text transition-colors">
+            Pipeline
           </a>
-          <a href="#architecture" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            Architecture
-          </a>
-          <a href="#security" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <a href="#security" className="hover:text-theme-text transition-colors">
             Security
           </a>
         </nav>
 
-        {/* Action Buttons with Static Sign-In/Up Fallback */}
+        {/* Action Buttons */}
         <div className="hidden md:flex items-center gap-3">
           {isLoaded && isSignedIn ? (
             <>
-              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+              <Button
+                size="sm"
+                className="bg-theme-body text-theme-text border border-theme-divider hover:bg-theme-divider gap-1.5 shadow-2xs"
+                asChild
+              >
                 <Link href="/dashboard">
-                  <LayoutDashboard className="w-4 h-4" />
-                  Go to Dashboard
+                  <LayoutDashboard className="w-3.5 h-3.5 text-theme-muted" strokeWidth={1.5} />
+                  Workspace
                 </Link>
               </Button>
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: "h-9 w-9",
-                  },
-                }}
-              />
+              <UserButton afterSignOutUrl="/" />
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/sign-in">Sign In</Link>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/sign-in">Sign in</Link>
               </Button>
-              <Button size="sm" className="gap-1.5 shadow-sm" asChild>
+              <Button size="sm" className="gap-1.5" asChild>
                 <Link href="/sign-up">
-                  Get Started
-                  <ArrowRight className="w-4 h-4" />
+                  Get started
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </Link>
               </Button>
             </>
@@ -90,84 +82,67 @@ export function Navbar({ onOpenDemoModal }) {
           ) : (
             <>
               <Button variant="ghost" size="sm" asChild className="text-xs px-2.5 h-8">
-                <Link href="/sign-in">Sign In</Link>
+                <Link href="/sign-in">Sign in</Link>
               </Button>
-              <Button size="sm" asChild className="text-xs px-3 h-8 shadow-xs">
-                <Link href="/sign-up">Sign Up</Link>
+              <Button size="sm" asChild className="text-xs px-3 h-8">
+                <Link href="/sign-up">Sign up</Link>
               </Button>
             </>
           )}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
+            popovertarget="navbar-mobile-menu"
+            className="p-1.5 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <Menu className="w-5 h-5" strokeWidth={1.5} />
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md px-4 pt-3 pb-6 space-y-3 animate-in slide-in-from-top-2">
-          <nav className="flex flex-col space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-            <a
-              href="#features"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+      {/* Mobile Drawer Menu (Native HTML Popover API) */}
+      <div
+        id="navbar-mobile-menu"
+        popover="auto"
+        className="fixed top-14 inset-x-0 w-full border-b border-theme-divider bg-theme-panel px-4 pt-2 pb-4 space-y-2 shadow-xl m-0 md:hidden backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      >
+        <nav className="flex flex-col space-y-1 text-sm font-medium text-theme-text">
+          <a
+            href="#features"
+            className="px-3 py-2 rounded-lg hover:bg-theme-body transition-colors"
+          >
+            Features
+          </a>
+          <a
+            href="#how-it-works"
+            className="px-3 py-2 rounded-lg hover:bg-theme-body transition-colors"
+          >
+            Pipeline
+          </a>
+          <a
+            href="#security"
+            className="px-3 py-2 rounded-lg hover:bg-theme-body transition-colors"
+          >
+            Security
+          </a>
+        </nav>
+        {isLoaded && isSignedIn && (
+          <div className="pt-2 border-t border-theme-divider">
+            <Button
+              size="sm"
+              className="w-full bg-theme-body text-theme-text border border-theme-divider hover:bg-theme-divider gap-1.5 justify-center shadow-2xs"
+              asChild
             >
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              How It Works
-            </a>
-            <a
-              href="#architecture"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              Architecture
-            </a>
-            <a
-              href="#security"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              Security
-            </a>
-          </nav>
-
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
-            {isLoaded && isSignedIn ? (
-              <Button className="w-full justify-center gap-1.5" asChild>
-                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  <LayoutDashboard className="w-4 h-4" />
-                  Go to Dashboard
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button variant="outline" className="w-full justify-center" asChild>
-                  <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
-                    Sign In
-                  </Link>
-                </Button>
-                <Button className="w-full justify-center gap-1.5" asChild>
-                  <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
-                    Get Started Free
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </>
-            )}
+              <Link href="/dashboard">
+                <LayoutDashboard className="w-3.5 h-3.5 text-theme-muted" strokeWidth={1.5} />
+                Workspace
+              </Link>
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }
+
+export default Navbar;

@@ -3,7 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Edit3, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Loader2, Edit3 } from "lucide-react";
 
 export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
   const [title, setTitle] = useState("");
@@ -17,7 +25,7 @@ export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
     }
   }, [conversation]);
 
-  if (!isOpen || !conversation) return null;
+  if (!conversation) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,27 +67,23 @@ export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-semibold text-sm">
-            <Edit3 className="w-4 h-4 text-blue-600" />
-            Rename Conversation
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-2 text-theme-text font-semibold text-sm">
+            <Edit3 className="w-4 h-4 text-theme-primary" />
+            <DialogTitle className="text-base font-semibold text-theme-text">
+              Rename Conversation
+            </DialogTitle>
           </div>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+          <DialogDescription className="text-xs text-theme-muted mt-1">
+            Choose a descriptive title for easy recall and retrieval.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-theme-text mb-1.5">
               Conversation Title
             </label>
             <Input
@@ -87,24 +91,24 @@ export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Q3 Financials Analysis"
               maxLength={100}
+              required
               disabled={loading}
               autoFocus
               className="w-full text-sm"
             />
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+            <div className="flex items-center justify-between text-[11px] text-theme-muted mt-1">
               <span>Descriptive name for quick reference</span>
               <span>{title.length}/100</span>
             </div>
           </div>
 
           {error && (
-            <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-600 dark:text-rose-400">
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600">
               {error}
             </div>
           )}
 
-          {/* Footer Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-2">
+          <DialogFooter className="gap-2.5 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -118,9 +122,9 @@ export function RenameModal({ isOpen, onClose, conversation, onSuccess }) {
               {loading && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
               Save Changes
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

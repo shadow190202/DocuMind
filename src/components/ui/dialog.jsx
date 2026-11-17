@@ -1,30 +1,50 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DialogContext = createContext({
   open: false,
   setOpen: () => {},
+  dialogRef: null,
 });
 
 export function Dialog({ children, open: controlledOpen, onOpenChange }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const dialogRef = useRef(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  const setOpen = (value) => {
-    if (!isControlled) {
-      setUncontrolledOpen(value);
+  const setOpen = useCallback(
+    (value) => {
+      if (!isControlled) {
+        setUncontrolledOpen(value);
+      }
+      if (onOpenChange) {
+        onOpenChange(value);
+      }
+    },
+    [isControlled, onOpenChange]
+  );
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (open) {
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+    } else {
+      if (dialog.open) {
+        dialog.close();
+      }
     }
-    if (onOpenChange) {
-      onOpenChange(value);
-    }
-  };
+  }, [open]);
 
   return (
-    <DialogContext.Provider value={{ open, setOpen }}>
+    <DialogContext.Provider value={{ open, setOpen, dialogRef }}>
       {children}
     </DialogContext.Provider>
   );
@@ -49,56 +69,51 @@ export function DialogTrigger({ children, asChild }) {
   );
 }
 
-export function DialogContent({ className, children }) {
-  const { open, setOpen } = useContext(DialogContext);
+export function DialogContent({ className, children, ...props }) {
+  const { setOpen, dialogRef } = useContext(DialogContext);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
+  const handleNativeClose = () => {
+    setOpen(false);
+  };
+
+  const handleBackdropClick = (e) => {
+    if (e.target === dialogRef?.current) {
+      const rect = dialogRef.current.getBoundingClientRect();
+      const clickedInDialog =
+        rect.top <= e.clientY &&
+        e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX &&
+        e.clientX <= rect.left + rect.width;
+      if (!clickedInDialog) {
         setOpen(false);
       }
-    };
-
-    if (open) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    } else {
-      document.body.style.overflow = "";
     }
-
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, setOpen]);
-
-  if (!open) return null;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in"
-        onClick={() => setOpen(false)}
-      />
-
-      {/* Dialog Box */}
-      <div
-        className={cn(
-          "relative z-50 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl transition-all dark:bg-slate-900 border border-slate-200 dark:border-slate-800",
-          className
-        )}
-      >
+    <dialog
+      ref={dialogRef}
+      onClose={handleNativeClose}
+      onCancel={handleNativeClose}
+      onClick={handleBackdropClick}
+      className={cn(
+        "m-auto p-0 bg-transparent text-theme-text rounded-2xl border-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in open:fade-in max-w-lg w-full",
+        className
+      )}
+      {...props}
+    >
+      <div className="relative w-full rounded-2xl bg-theme-panel p-6 border border-theme-divider text-theme-text shadow-2xl">
         <button
+          type="button"
           onClick={() => setOpen(false)}
-          className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+          className="absolute right-4 top-4 rounded-lg p-1 text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
         >
           <X className="w-5 h-5" />
           <span className="sr-only">Close</span>
         </button>
         {children}
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -108,7 +123,7 @@ export function DialogHeader({ className, children }) {
 
 export function DialogTitle({ className, children }) {
   return (
-    <h2 className={cn("text-lg font-semibold text-slate-900 dark:text-slate-100", className)}>
+    <h2 className={cn("text-lg font-semibold text-theme-text", className)}>
       {children}
     </h2>
   );
@@ -116,7 +131,7 @@ export function DialogTitle({ className, children }) {
 
 export function DialogDescription({ className, children }) {
   return (
-    <p className={cn("text-sm text-slate-500 dark:text-slate-400", className)}>
+    <p className={cn("text-sm text-theme-muted", className)}>
       {children}
     </p>
   );
@@ -124,7 +139,7 @@ export function DialogDescription({ className, children }) {
 
 export function DialogFooter({ className, children }) {
   return (
-    <div className={cn("flex items-center justify-end space-x-2 pt-4 mt-2 border-t border-slate-100 dark:border-slate-800", className)}>
+    <div className={cn("flex items-center justify-end space-x-2 pt-4 mt-2 border-t border-theme-divider", className)}>
       {children}
     </div>
   );

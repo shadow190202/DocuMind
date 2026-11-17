@@ -3,12 +3,14 @@ import { cn } from "@/lib/utils";
 
 export const buttonVariants = {
   variant: {
-    default: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm focus-visible:ring-blue-500",
-    secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
-    outline: "border border-slate-300 bg-transparent hover:bg-slate-100 text-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800",
-    ghost: "hover:bg-slate-100 text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800",
+    default: "bg-theme-primary text-theme-primaryBtn hover:bg-theme-primaryHover shadow-sm focus-visible:ring-theme-primary",
+    ai: "bg-theme-ai text-white hover:bg-theme-aiHover shadow-sm focus-visible:ring-theme-ai",
+    "ai-outline": "border border-theme-ai/30 bg-theme-ai/10 text-theme-aiAccent hover:bg-theme-ai/20",
+    secondary: "bg-theme-body text-theme-text hover:bg-theme-divider",
+    outline: "border border-theme-divider bg-transparent hover:bg-theme-body text-theme-text",
+    ghost: "hover:bg-theme-body text-theme-text",
     destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm focus-visible:ring-red-500",
-    link: "text-blue-600 underline-offset-4 hover:underline dark:text-blue-400 p-0 h-auto",
+    link: "text-theme-primary underline-offset-4 hover:underline p-0 h-auto",
   },
   size: {
     sm: "min-h-[2.25rem] h-9 px-3.5 py-1.5 text-xs rounded-md font-medium",
@@ -47,5 +49,4 @@ export const Button = React.forwardRef(
     );
   }
 );
-
 Button.displayName = "Button";

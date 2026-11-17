@@ -19,7 +19,7 @@ import {
   Copy,
   Users,
 } from "lucide-react";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -251,28 +251,25 @@ export default function DocumentsPage() {
   });
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <Sidebar />
-
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
-        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <DashboardLayout>
+        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-theme-divider bg-theme-panel/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">My Documents</h1>
+            <h1 className="text-lg font-bold text-theme-text">My Documents</h1>
             <Badge variant="outline" className="text-xs">
               {docs.length} {docs.length === 1 ? "File" : "Files"}
             </Badge>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button
-              variant="outline"
+              variant="ai-outline"
               size="md"
               onClick={() => setSearchModalOpen(true)}
-              className="gap-2 shadow-sm text-blue-600 dark:text-blue-400 w-full sm:w-auto justify-center"
+              className="gap-2 shadow-xs w-full sm:w-auto justify-center"
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-4 h-4 text-theme-aiAccent" />
               Vault Semantic Search
             </Button>
-            <Button size="md" asChild className="gap-2 shadow-sm w-full sm:w-auto justify-center">
+            <Button size="md" asChild className="gap-2 shadow-xs w-full sm:w-auto justify-center">
               <Link href="/documents/upload">
                 <Upload className="w-4 h-4" />
                 Upload Document
@@ -288,21 +285,21 @@ export default function DocumentsPage() {
                 <CardTitle>Document Vault</CardTitle>
                 <CardDescription className="flex items-center gap-2 flex-wrap">
                   <span>Your document repository backed by PostgreSQL.</span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1 font-normal">
-                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> 24-hr retention
+                  <span className="text-xs text-theme-muted flex items-center gap-1 font-normal">
+                    <Clock className="w-3.5 h-3.5 text-amber-500" /> 24-hr retention
                   </span>
                 </CardDescription>
               </div>
 
               {/* Segmented Filter Tabs */}
-              <div className="flex items-center flex-wrap gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-medium">
+              <div className="flex items-center flex-wrap gap-1.5 p-1 bg-theme-body border border-theme-divider rounded-lg text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => setFilterTab("all")}
                   className={`px-3 py-1.5 rounded-md transition ${
                     filterTab === "all"
-                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
-                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-theme-panel text-theme-primary shadow-xs font-semibold"
+                      : "text-theme-muted hover:text-theme-text"
                   }`}
                 >
                   All ({docs.length})
@@ -312,8 +309,8 @@ export default function DocumentsPage() {
                   onClick={() => setFilterTab("mine")}
                   className={`px-3 py-1.5 rounded-md transition ${
                     filterTab === "mine"
-                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
-                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-theme-panel text-theme-primary shadow-xs font-semibold"
+                      : "text-theme-muted hover:text-theme-text"
                   }`}
                 >
                   My Documents ({docs.filter((d) => d.isOwner).length})
@@ -323,8 +320,8 @@ export default function DocumentsPage() {
                   onClick={() => setFilterTab("shared")}
                   className={`px-3 py-1.5 rounded-md transition ${
                     filterTab === "shared"
-                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
-                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-theme-panel text-theme-primary shadow-xs font-semibold"
+                      : "text-theme-muted hover:text-theme-text"
                   }`}
                 >
                   Shared with Me ({docs.filter((d) => !d.isOwner).length})
@@ -355,22 +352,22 @@ export default function DocumentsPage() {
                   <p>{error}</p>
                 </div>
               ) : filteredDocs.length === 0 ? (
-                <div className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                  <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                <div className="p-12 text-center border-2 border-dashed border-theme-divider rounded-2xl space-y-4">
+                  <div className="h-12 w-12 rounded-xl bg-theme-body text-theme-muted flex items-center justify-center mx-auto">
                     <FileText className="w-6 h-6" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    <h4 className="text-sm font-semibold text-theme-text">
                       {searchQuery ? "No matching documents" : "No documents uploaded yet"}
                     </h4>
-                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    <p className="text-xs text-theme-muted max-w-sm mx-auto">
                       {searchQuery
                         ? "Try searching for a different keyword."
                         : "Upload your first PDF, DOCX, TXT, or CSV file to start building your AI knowledge base."}
                     </p>
                   </div>
                   {!searchQuery && (
-                    <Button asChild size="md" className="gap-2 shadow-sm">
+                    <Button asChild size="md" className="gap-2 shadow-xs">
                       <Link href="/documents/upload">
                         <Upload className="w-4 h-4" />
                         Upload Document
@@ -383,48 +380,48 @@ export default function DocumentsPage() {
                   {filteredDocs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs space-y-3"
+                      className="rounded-xl border border-theme-divider bg-theme-panel p-4 transition-all hover:border-theme-divider hover:shadow-xs space-y-3"
                     >
                       {/* Top Tier: Document Identity, Metadata & Status */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                         {/* Left: Icon, Filename, Owner/Editor/Viewer badge */}
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 shrink-0 shadow-2xs">
+                          <div className="p-2.5 rounded-xl bg-theme-primary/10 text-theme-primary shrink-0 shadow-2xs">
                             <FileText className="w-5 h-5" />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Link
                                 href={`/documents/${doc.id}`}
-                                className="font-semibold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[200px] sm:max-w-md text-sm transition-colors"
+                                className="font-semibold text-theme-text hover:text-theme-primary truncate max-w-[200px] sm:max-w-md text-sm transition-colors"
                               >
                                 {doc.filename}
                               </Link>
                               {doc.isOwner ? (
                                 <Badge
-                                  variant="outline"
-                                  className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0"
+                                  variant="secondary"
+                                  className="text-xs font-normal"
                                 >
                                   Owner
                                 </Badge>
                               ) : doc.role === "write" ? (
                                 <Badge
                                   variant="outline"
-                                  className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0"
+                                  className="bg-theme-primary/10 text-theme-primary border-theme-primary/30 text-[10px] px-1.5 py-0"
                                 >
                                   Editor
                                 </Badge>
                               ) : (
                                 <Badge
                                   variant="outline"
-                                  className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30 text-[10px] px-1.5 py-0"
+                                  className="bg-theme-muted/10 text-theme-muted border-theme-divider text-[10px] px-1.5 py-0"
                                 >
                                   Viewer
                                 </Badge>
                               )}
                             </div>
                             {!doc.isOwner && (
-                              <span className="text-[11px] text-slate-400 block truncate mt-0.5">
+                              <span className="text-[11px] text-theme-muted block truncate mt-0.5">
                                 Shared by {doc.owner?.name || doc.owner?.email || "colleague"}
                               </span>
                             )}
@@ -432,15 +429,15 @@ export default function DocumentsPage() {
                         </div>
 
                         {/* Middle/Right: Format, Size, Status Badge, Uploaded Date */}
-                        <div className="flex items-center gap-3 shrink-0 flex-wrap text-xs text-slate-500 dark:text-slate-400 pl-11 md:pl-0">
-                          <span className="font-mono text-xs uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200/60 dark:border-slate-700/60">
+                        <div className="flex items-center gap-3 shrink-0 flex-wrap text-xs text-theme-muted pl-11 md:pl-0">
+                          <span className="font-mono text-xs uppercase px-2 py-0.5 rounded bg-theme-body text-theme-text font-semibold border border-theme-divider">
                             {doc.fileType}
                           </span>
-                          <span className="text-slate-500 dark:text-slate-400">
+                          <span className="text-theme-muted">
                             {formatFileSize(doc.fileSize)}
                           </span>
                           <div>{getStatusBadge(doc.processingStatus)}</div>
-                          <span className="text-slate-400 dark:text-slate-500">
+                          <span className="text-theme-muted">
                             {formatDate(doc.createdAt)}
                           </span>
                           {(() => {
@@ -452,7 +449,7 @@ export default function DocumentsPage() {
                                     ? "text-rose-600 dark:text-rose-400"
                                     : countdown.isExpiringSoon
                                     ? "text-amber-600 dark:text-amber-400"
-                                    : "text-slate-500 dark:text-slate-400"
+                                    : "text-theme-muted"
                                 }`}
                                 title={
                                   countdown.isExpired
@@ -465,9 +462,10 @@ export default function DocumentsPage() {
                                     countdown.isExpired
                                       ? "text-rose-500"
                                       : countdown.isExpiringSoon
-                                      ? "text-amber-500 animate-pulse"
-                                      : "text-amber-600 dark:text-amber-400"
+                                      ? "text-amber-500"
+                                      : "text-theme-muted"
                                   }`}
+                                  strokeWidth={1.5}
                                 />
                                 {countdown.label}
                               </span>
@@ -477,9 +475,9 @@ export default function DocumentsPage() {
                       </div>
 
                       {/* Bottom Tier: Full-Width Actions Bar */}
-                      <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="pt-2.5 border-t border-theme-divider flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                          <span className="text-xs text-slate-400 font-medium mr-1 select-none">
+                          <span className="text-xs text-theme-muted font-medium mr-1 select-none">
                             Actions:
                           </span>
 
@@ -488,7 +486,7 @@ export default function DocumentsPage() {
                             variant="ghost"
                             size="sm"
                             asChild
-                            className="gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="gap-1.5 text-xs text-theme-muted hover:text-theme-text hover:bg-theme-body"
                             title="View Document & Extracted Text"
                           >
                             <Link href={`/documents/${doc.id}`}>
@@ -503,7 +501,7 @@ export default function DocumentsPage() {
                             size="sm"
                             onClick={(e) => handleProcess(doc.id, e)}
                             disabled={processingId === doc.id || doc.role === "read"}
-                            className="gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                            className="gap-1.5 text-xs text-theme-muted hover:text-theme-text hover:bg-theme-body disabled:opacity-50"
                             title={
                               doc.role === "read"
                                 ? "Only the owner or an editor can reprocess this document."
@@ -513,7 +511,7 @@ export default function DocumentsPage() {
                             }
                           >
                             {processingId === doc.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-primary" />
                             ) : (
                               <RefreshCw className="w-3.5 h-3.5" />
                             )}
@@ -526,7 +524,7 @@ export default function DocumentsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setShareDoc(doc)}
-                              className="gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              className="gap-1.5 text-xs text-theme-muted hover:text-theme-text hover:bg-theme-body"
                               title="Share Document"
                             >
                               <Users className="w-3.5 h-3.5" />
@@ -556,7 +554,6 @@ export default function DocumentsPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
 
       {/* Delete Confirmation Modal */}
       <Dialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
@@ -565,7 +562,7 @@ export default function DocumentsPage() {
             <DialogTitle>Delete Document</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <strong className="text-slate-900 dark:text-slate-100">
+              <strong className="text-theme-text">
                 {docToDelete?.filename}
               </strong>
               ? This will remove the file from storage and cascade deletion in PostgreSQL.
@@ -600,9 +597,9 @@ export default function DocumentsPage() {
       {/* Vault Semantic Search Modal */}
       <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-6">
-          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+          <DialogHeader className="pb-3 border-b border-theme-divider">
             <div className="flex items-center gap-2">
-              <Search className="w-5 h-5 text-blue-600" />
+              <Search className="w-5 h-5 text-theme-primary" />
               <DialogTitle className="text-base font-bold">
                 Vault Semantic Vector Search
               </DialogTitle>
@@ -617,7 +614,7 @@ export default function DocumentsPage() {
             <form onSubmit={handleVaultSearch} className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-theme-muted" />
                   <Input
                     placeholder="Search across your documents (e.g. 'financial forecast', 'user authentication')..."
                     value={vaultQuery}
@@ -627,6 +624,7 @@ export default function DocumentsPage() {
                 </div>
                 <Button
                   type="submit"
+                  variant="ai"
                   disabled={vaultSearching || !vaultQuery.trim()}
                   className="gap-2 shrink-0"
                 >
@@ -645,15 +643,15 @@ export default function DocumentsPage() {
               </div>
 
               {/* Scope & Parameters Bar */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-theme-body border border-theme-divider flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-4 flex-wrap">
                   {/* Document Scope */}
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-slate-600 dark:text-slate-400">Scope:</span>
+                    <span className="font-medium text-theme-muted">Scope:</span>
                     <select
                       value={vaultSelectedDocId}
                       onChange={(e) => setVaultSelectedDocId(e.target.value)}
-                      className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 max-w-[150px] truncate"
+                      className="h-7 text-xs rounded-md border border-theme-divider bg-theme-panel text-theme-text px-2 py-0.5 max-w-[150px] truncate"
                     >
                       <option value="">All Documents</option>
                       {docs
@@ -668,11 +666,11 @@ export default function DocumentsPage() {
 
                   {/* Top-K */}
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-slate-600 dark:text-slate-400">Top-K:</span>
+                    <span className="font-medium text-theme-muted">Top-K:</span>
                     <select
                       value={vaultTopK}
                       onChange={(e) => setVaultTopK(Number(e.target.value))}
-                      className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5"
+                      className="h-7 text-xs rounded-md border border-theme-divider bg-theme-panel text-theme-text px-2 py-0.5"
                     >
                       <option value={3}>3 chunks</option>
                       <option value={5}>5 chunks</option>
@@ -683,7 +681,7 @@ export default function DocumentsPage() {
 
                   {/* Threshold */}
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-slate-600 dark:text-slate-400">Min Threshold:</span>
+                    <span className="font-medium text-theme-muted">Min Threshold:</span>
                     <input
                       type="range"
                       min="0.0"
@@ -691,9 +689,9 @@ export default function DocumentsPage() {
                       step="0.05"
                       value={vaultThreshold}
                       onChange={(e) => setVaultThreshold(Number(e.target.value))}
-                      className="w-20 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      className="w-20 h-1.5 bg-theme-divider rounded-lg appearance-none cursor-pointer accent-theme-ai"
                     />
-                    <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 w-7">
+                    <span className="font-mono text-[11px] font-semibold text-theme-text w-7">
                       {Number(vaultThreshold).toFixed(2)}
                     </span>
                   </div>
@@ -704,9 +702,9 @@ export default function DocumentsPage() {
                       type="checkbox"
                       checked={vaultIncludeContext}
                       onChange={(e) => setVaultIncludeContext(e.target.checked)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      className="rounded border-theme-divider text-theme-ai focus:ring-theme-ai w-3.5 h-3.5"
                     />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">
+                    <span className="text-theme-text font-medium">
                       Assemble RAG Context
                     </span>
                   </label>
@@ -725,8 +723,8 @@ export default function DocumentsPage() {
             {/* Search Results */}
             {vaultSearchResults && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                <div className="flex items-center justify-between text-xs border-b border-theme-divider pb-2">
+                  <span className="font-medium text-theme-text">
                     Retrieved {vaultSearchResults.count} chunk{vaultSearchResults.count === 1 ? "" : "s"} for &quot;{vaultSearchResults.query}&quot;
                   </span>
                   <Badge variant="outline" className="text-[10px]">
@@ -735,11 +733,11 @@ export default function DocumentsPage() {
                 </div>
 
                 {vaultSearchResults.count === 0 ? (
-                  <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <div className="p-8 text-center border-2 border-dashed border-theme-divider rounded-xl space-y-1">
+                    <p className="text-sm font-medium text-theme-text">
                       No matching chunks found
                     </p>
-                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    <p className="text-xs text-theme-muted max-w-sm mx-auto">
                       No document chunks met the similarity threshold of {vaultSearchResults.threshold}. Try lowering the threshold or refining your search keywords.
                     </p>
                   </div>
@@ -748,36 +746,36 @@ export default function DocumentsPage() {
                     {vaultSearchResults.results.map((chunk, idx) => (
                       <div
                         key={chunk.chunkId}
-                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                        className="rounded-xl border border-theme-divider bg-theme-panel overflow-hidden shadow-xs hover:border-theme-ai/40 transition-colors"
                       >
-                        <div className="bg-slate-50 dark:bg-slate-800/60 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                        <div className="bg-theme-body px-4 py-2 border-b border-theme-divider flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            <span className="text-xs font-bold text-theme-text">
                               #{idx + 1}
                             </span>
-                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
+                            <span className="text-xs font-medium text-theme-text truncate max-w-[200px]">
                               {chunk.documentName}
                             </span>
                             <Badge variant="outline" className="text-[10px]">
                               {chunk.pageNumber !== null ? `Page ${chunk.pageNumber}` : "General Section"}
                             </Badge>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-theme-muted">
                               Chunk #{chunk.chunkIndex + 1}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge
-                              variant="default"
-                              className="text-[10px] font-mono py-0.5 px-2 bg-blue-600 text-white"
+                              variant="ai"
+                              className="text-[10px] font-mono py-0.5 px-2"
                             >
                               {(chunk.similarityScore * 100).toFixed(1)}% Match
                             </Badge>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-theme-muted">
                               ~{chunk.estimatedTokenCount} tokens
                             </span>
                           </div>
                         </div>
-                        <div className="p-3.5 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed select-text">
+                        <div className="p-3.5 text-xs font-mono text-theme-text whitespace-pre-wrap leading-relaxed select-text">
                           {chunk.content}
                         </div>
                       </div>
@@ -787,23 +785,23 @@ export default function DocumentsPage() {
 
                 {/* Assembled RAG Prompt Context */}
                 {vaultSearchResults.context && (
-                  <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900 text-slate-200 overflow-hidden shadow-md">
-                    <div className="bg-slate-800/90 px-4 py-2.5 border-b border-slate-700 flex flex-wrap items-center justify-between gap-2">
+                  <div className="mt-6 rounded-xl border border-theme-divider bg-theme-panel text-theme-text overflow-hidden shadow-sm">
+                    <div className="bg-theme-body px-4 py-2.5 border-b border-theme-divider flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-3.5 h-3.5 text-blue-400" />
-                        <span className="text-xs font-semibold text-white">
+                        <FileText className="w-3.5 h-3.5 text-theme-aiAccent" />
+                        <span className="text-xs font-semibold text-theme-text">
                           Assembled RAG Context (LLM Prompt-Ready)
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-[11px]">
-                        <span className="text-slate-400">
+                        <span className="text-theme-muted">
                           Budget: ~{vaultSearchResults.context.totalEstimatedTokens} tokens (est.)
                         </span>
-                        <span className="text-slate-400">
+                        <span className="text-theme-muted">
                           Used: {vaultSearchResults.context.chunksUsed} chunks
                         </span>
                         {vaultSearchResults.context.chunksOmitted > 0 && (
-                          <span className="text-amber-400">
+                          <span className="text-amber-500 font-medium">
                             Omitted: {vaultSearchResults.context.chunksOmitted}
                           </span>
                         )}
@@ -811,11 +809,11 @@ export default function DocumentsPage() {
                           variant="outline"
                           size="sm"
                           onClick={handleCopyVaultContext}
-                          className="h-6 text-[11px] bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 gap-1"
+                          className="h-6 text-[11px] bg-theme-panel border-theme-divider text-theme-text hover:bg-theme-body gap-1"
                         >
                           {vaultCopiedContext ? (
                             <>
-                              <Check className="w-3 h-3 text-green-400" />
+                              <Check className="w-3 h-3 text-green-500" />
                               Copied
                             </>
                           ) : (
@@ -827,9 +825,9 @@ export default function DocumentsPage() {
                         </Button>
                       </div>
                     </div>
-                    <div className="p-3.5 text-xs font-mono text-slate-300 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed select-text">
+                    <div className="p-3.5 text-xs font-mono text-theme-text max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed select-text">
                       {vaultSearchResults.context.contextText || (
-                        <span className="text-slate-500 italic">No context generated.</span>
+                        <span className="text-theme-muted italic">No context generated.</span>
                       )}
                     </div>
                   </div>
@@ -838,7 +836,7 @@ export default function DocumentsPage() {
             )}
           </div>
 
-          <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
+          <DialogFooter className="pt-3 border-t border-theme-divider">
             <DialogClose asChild>
               <Button variant="outline" size="sm">
                 Close
@@ -856,6 +854,6 @@ export default function DocumentsPage() {
         documentTitle={shareDoc?.filename}
         onPermissionsUpdated={fetchDocuments}
       />
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { StatCard } from "@/components/admin/stat-card";
 import {
@@ -73,13 +73,11 @@ export default function AdminProcessingPage() {
   const activeJobs = data?.activeJobs || [];
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <Sidebar />
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
-        <AdminHeader
-          title="Processing Pipeline & Failure Diagnostics"
-          subtitle="Real-time ingestion monitoring, error diagnostics, and administrative retry workflows"
-        />
+    <DashboardLayout>
+      <AdminHeader
+        title="Processing Pipeline & Failure Diagnostics"
+        subtitle="Real-time ingestion monitoring, error diagnostics, and administrative retry workflows"
+      />
 
         <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           {error && (
@@ -135,9 +133,9 @@ export default function AdminProcessingPage() {
           {activeJobs.length > 0 && (
             <Card className="border-blue-200 dark:border-blue-900/60">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                  Currently In-Flight Ingestion Jobs ({activeJobs.length})
+                <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  Currently in-flight ingestion jobs ({activeJobs.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -145,14 +143,14 @@ export default function AdminProcessingPage() {
                   {activeJobs.map((job) => (
                     <div key={job.id} className="py-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <FileText className="w-4 h-4 text-blue-500" />
+                        <FileText className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
                         <div>
-                          <p className="font-semibold text-slate-800 dark:text-slate-200">{job.filename}</p>
-                          <p className="text-[11px] text-slate-400">Owner: {job.owner.email || job.owner.name}</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-200">{job.filename}</p>
+                          <p className="text-xs text-slate-400">Owner: {job.owner.email || job.owner.name}</p>
                         </div>
                       </div>
-                      <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 animate-pulse">
-                        Chunking & Embedding...
+                      <span className="text-xs font-mono text-slate-500">
+                        Chunking and embedding
                       </span>
                     </div>
                   ))}
@@ -165,10 +163,10 @@ export default function AdminProcessingPage() {
           <Card>
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <span>Failed Documents Diagnostic Log</span>
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-normal">
-                    {failedDocs.length} Failures
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <span>Failed documents diagnostic log</span>
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-normal">
+                    {failedDocs.length} failures
                   </span>
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -208,23 +206,23 @@ export default function AdminProcessingPage() {
                       >
                         <div className="space-y-1.5 min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-slate-900 dark:text-white">
+                            <span className="font-medium text-xs text-slate-900 dark:text-white">
                               {doc.filename}
                             </span>
-                            <span className="text-[10px] font-mono uppercase bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">
-                              {doc.fileType}
+                            <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">
+                              {doc.fileType?.toLowerCase()}
                             </span>
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-xs text-slate-400">
                               Owner: {doc.owner.email || doc.owner.name}
                             </span>
                           </div>
 
                           {/* Error Callout */}
-                          <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 font-mono text-[11px] text-rose-800 dark:text-rose-300 break-words">
+                          <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 font-mono text-xs text-rose-800 dark:text-rose-300 break-words">
                             {doc.errorMessage}
                           </div>
 
-                          <p className="text-[10px] text-slate-400 font-mono">
+                          <p className="text-xs text-slate-400 font-mono tabular-nums">
                             Failed at: {new Date(doc.failedAt).toLocaleString()}
                           </p>
                         </div>
@@ -234,10 +232,10 @@ export default function AdminProcessingPage() {
                             size="sm"
                             disabled={isRetrying}
                             onClick={() => handleRetry(doc.id)}
-                            className="text-xs gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+                            className="text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
                           >
-                            <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? "animate-spin" : ""}`} />
-                            <span>Retry Ingestion</span>
+                            <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? "animate-spin" : ""}`} strokeWidth={1.5} />
+                            <span>Retry ingestion</span>
                           </Button>
                         </div>
                       </div>
@@ -248,7 +246,6 @@ export default function AdminProcessingPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

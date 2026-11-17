@@ -15,7 +15,7 @@ import {
   FileCheck,
   ArrowRight,
 } from "lucide-react";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -172,19 +172,16 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <Sidebar />
-
-      <div className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden flex flex-col">
-        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-3">
+    <DashboardLayout className="max-w-full overflow-x-hidden">
+        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-theme-divider bg-theme-panel/80 backdrop-blur-md flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/documents" className="gap-1.5 text-xs text-slate-500">
+              <Link href="/documents" className="gap-1.5 text-xs text-theme-muted">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Documents
               </Link>
             </Button>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Upload Document</h1>
+            <h1 className="text-lg font-bold text-theme-text">Upload Document</h1>
           </div>
           <Badge variant="outline" className="text-xs font-medium shrink-0">
             Secure Ingestion
@@ -214,8 +211,8 @@ export default function UploadPage() {
                 onClick={() => fileInputRef.current?.click()}
                 className={`relative flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
                   isDragging
-                    ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 scale-[1.01]"
-                    : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 hover:border-blue-400 hover:bg-slate-50/50 dark:hover:bg-slate-900"
+                    ? "border-theme-primary bg-theme-primary/10 scale-[1.01]"
+                    : "border-theme-divider bg-theme-panel hover:border-theme-primary hover:bg-theme-body"
                 }`}
               >
                 <input
@@ -226,15 +223,15 @@ export default function UploadPage() {
                   className="hidden"
                 />
 
-                <div className="h-14 w-14 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shadow-sm">
+                <div className="h-14 w-14 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mb-4 shadow-xs">
                   <UploadCloud className="w-7 h-7" />
                 </div>
 
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  <p className="text-sm font-semibold text-theme-text">
                     Click to browse or drag and drop your document here
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-theme-muted">
                     Supports PDF, DOCX, TXT, or CSV (up to 20MB)
                   </p>
                 </div>
@@ -262,16 +259,16 @@ export default function UploadPage() {
 
               {/* Selected File Stage Box */}
               {selectedFile && !uploadResult && (
-                <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 max-w-full overflow-hidden">
+                <div className="p-4 rounded-xl border border-theme-primary/30 bg-theme-primary/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 max-w-full overflow-hidden">
                   <div className="flex items-center gap-3 min-w-0 max-w-full">
-                    <div className="p-2.5 rounded-lg bg-blue-600 text-white shrink-0">
+                    <div className="p-2.5 rounded-lg bg-theme-primary text-theme-primaryBtn shrink-0">
                       <FileText className="w-5 h-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100 break-all">
+                      <p className="text-sm font-semibold truncate text-theme-text break-all">
                         {selectedFile.name}
                       </p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-xs text-theme-muted truncate">
                         {formatFileSize(selectedFile.size)} • Ready for ingestion
                       </p>
                     </div>
@@ -284,7 +281,7 @@ export default function UploadPage() {
                         e.stopPropagation();
                         setSelectedFile(null);
                       }}
-                      className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-800 shrink-0"
+                      className="p-2 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-body shrink-0"
                       aria-label="Remove selected file"
                     >
                       <X className="w-4 h-4" />
@@ -323,17 +320,17 @@ export default function UploadPage() {
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900 text-xs space-y-1.5 break-words max-w-full">
+                  <div className="p-3 rounded-lg bg-theme-panel/80 border border-emerald-100 dark:border-emerald-900 text-xs space-y-1.5 break-words max-w-full">
                     <p className="truncate">
-                      <strong className="text-slate-700 dark:text-slate-300">File Name:</strong>{" "}
-                      <span className="font-medium text-slate-900 dark:text-slate-100 break-all">{uploadResult.filename}</span>
+                      <strong className="text-theme-text">File Name:</strong>{" "}
+                      <span className="font-medium text-theme-text break-all">{uploadResult.filename}</span>
                     </p>
                     <p className="break-all">
-                      <strong className="text-slate-700 dark:text-slate-300">Document ID:</strong>{" "}
+                      <strong className="text-theme-text">Document ID:</strong>{" "}
                       <span className="font-mono text-[11px] select-all">{uploadResult.id}</span>
                     </p>
                     <p className="flex items-center gap-1.5 flex-wrap">
-                      <strong className="text-slate-700 dark:text-slate-300">Status:</strong>
+                      <strong className="text-theme-text">Status:</strong>
                       <Badge variant="warning" className="text-[10px]">
                         {uploadResult.processingStatus}
                       </Badge>
@@ -365,7 +362,6 @@ export default function UploadPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

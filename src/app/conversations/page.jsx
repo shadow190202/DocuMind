@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -132,23 +132,18 @@ export default function ConversationsPage() {
   );
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      {/* Universal Sidebar */}
-      <Sidebar />
-
-      {/* Main Content Area */}
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
+    <DashboardLayout>
         {/* Header */}
-        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-3">
+        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-theme-divider bg-theme-panel/80 backdrop-blur-md flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-lg bg-theme-primary/10 text-theme-primary">
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              <h1 className="text-base font-bold text-theme-text leading-tight">
                 Conversation History
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-theme-muted">
                 {total} {total === 1 ? "conversation" : "conversations"} recorded
               </p>
             </div>
@@ -165,11 +160,11 @@ export default function ConversationsPage() {
         {/* Dashboard Body */}
         <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl w-full mx-auto">
           {/* Filter & Controls Toolbar */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+          <div className="bg-theme-panel border border-theme-divider rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
               {/* Search Bar */}
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-theme-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -179,7 +174,7 @@ export default function ConversationsPage() {
                 {search && (
                   <button
                     onClick={() => setSearch("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme-text"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -195,7 +190,7 @@ export default function ConversationsPage() {
                       setTimeRange(e.target.value);
                       setPage(1);
                     }}
-                    className="h-9 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="h-9 px-3 py-1.5 bg-theme-body border border-theme-divider rounded-lg text-xs font-medium text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-primary cursor-pointer"
                   >
                     <option value="all">All Time</option>
                     <option value="24h">Last 24 Hours</option>
@@ -212,7 +207,7 @@ export default function ConversationsPage() {
                       setSort(e.target.value);
                       setPage(1);
                     }}
-                    className="h-9 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="h-9 px-3 py-1.5 bg-theme-body border border-theme-divider rounded-lg text-xs font-medium text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-primary cursor-pointer"
                   >
                     <option value="recent">Most Recent</option>
                     <option value="oldest">Oldest First</option>
@@ -229,7 +224,7 @@ export default function ConversationsPage() {
                       setDocumentId(e.target.value);
                       setPage(1);
                     }}
-                    className="h-9 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer max-w-[180px] truncate"
+                    className="h-9 px-3 py-1.5 bg-theme-body border border-theme-divider rounded-lg text-xs font-medium text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-primary cursor-pointer max-w-[180px] truncate"
                   >
                     <option value="">All Scopes</option>
                     {documentsList.map((doc) => (
@@ -245,7 +240,7 @@ export default function ConversationsPage() {
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    className="text-xs h-9 text-slate-500 hover:text-slate-700"
+                    className="text-xs h-9 text-theme-muted hover:text-theme-text"
                   >
                     Reset
                   </Button>
@@ -256,31 +251,23 @@ export default function ConversationsPage() {
 
           {/* Conversations Grid / List */}
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-44 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse p-5 space-y-3"
-                >
-                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
-                  <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
-                  <div className="h-4 bg-slate-100 dark:bg-slate-800/60 rounded w-full" />
-                </div>
-              ))}
+            <div className="py-16 text-center space-y-2">
+              <Loader2 className="w-5 h-5 animate-spin text-theme-muted mx-auto" strokeWidth={1.5} />
+              <p className="text-xs text-theme-muted">Loading conversations...</p>
             </div>
           ) : conversations.length === 0 ? (
             /* Empty State */
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center max-w-lg mx-auto space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+            <div className="bg-theme-panel border border-theme-divider rounded-2xl p-12 text-center max-w-lg mx-auto space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mx-auto">
                 <MessageSquare className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-theme-text">
                   {hasActiveFilters
                     ? "No conversations match your criteria"
                     : "No conversation history yet"}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                <p className="text-xs text-theme-muted mt-1 max-w-sm mx-auto">
                   {hasActiveFilters
                     ? "Try adjusting your search keywords, time range, or document scope filter."
                     : "Ask questions about your uploaded documents to start your first grounded AI conversation."}
@@ -316,7 +303,7 @@ export default function ConversationsPage() {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+                <div className="flex items-center justify-between pt-4 border-t border-theme-divider text-xs text-theme-muted">
                   <span>
                     Showing {(page - 1) * limit + 1} to{" "}
                     {Math.min(page * limit, total)} of {total} conversations
@@ -352,7 +339,6 @@ export default function ConversationsPage() {
             </>
           )}
         </div>
-      </div>
 
       {/* Rename Modal */}
       <RenameModal
@@ -369,6 +355,6 @@ export default function ConversationsPage() {
         conversation={deleteTarget}
         onSuccess={handleDeleteSuccess}
       />
-    </div>
+    </DashboardLayout>
   );
 }

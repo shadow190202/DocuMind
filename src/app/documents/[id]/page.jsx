@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -10,32 +10,22 @@ import {
   Trash2,
   Copy,
   Check,
-  AlertCircle,
   Clock,
   Layers,
   FileCode,
   HardDrive,
   Calendar,
   Loader2,
-  Database,
-  CheckCircle2,
   Search,
-  SlidersHorizontal,
   MessageSquare,
-  Send,
-  Bot,
-  User,
-  ChevronDown,
-  ChevronUp,
   Users,
   Upload,
 } from "lucide-react";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatExpirationCountdown } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +37,11 @@ import {
 } from "@/components/ui/dialog";
 import { SummaryTab } from "@/components/documents/summary-tab";
 import { ShareDialog } from "@/components/documents/share-dialog";
-import { ChatMessageContent } from "@/components/chat/chat-message-content";
+import { TextTab } from "@/components/documents/tabs/text-tab";
+import { ChunksTab } from "@/components/documents/tabs/chunks-tab";
+import { SearchTab } from "@/components/documents/tabs/search-tab";
+import { QaTab } from "@/components/documents/tabs/qa-tab";
+import { MetadataTab } from "@/components/documents/tabs/metadata-tab";
 
 export default function DocumentDetailsPage() {
   const params = useParams();
@@ -60,86 +54,69 @@ export default function DocumentDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("full"); // "full" | "pages" | "chunks" | "search" | "qa" | "metadata"
+  const [activeTab, setActiveTab] = useState("full");
   const [copied, setCopied] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  // Semantic search state
-  const [searchQueryText, setSearchQueryText] = useState("");
-  const [topK, setTopK] = useState(5);
-  const [threshold, setThreshold] = useState(0.5);
-  const [includeContext, setIncludeContext] = useState(true);
-  const [searchResults, setSearchResults] = useState(null);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState(null);
-  const [copiedContext, setCopiedContext] = useState(false);
-
-  // AI Q&A State
-  const [qaQuestion, setQaQuestion] = useState("");
-  const [lastQaQuestion, setLastQaQuestion] = useState("");
-  const [qaLoading, setQaLoading] = useState(false);
-  const [qaError, setQaError] = useState(null);
-  const [conversationId, setConversationId] = useState(null);
-  const [messagesList, setMessagesList] = useState([]);
-  const [expandedSources, setExpandedSources] = useState({});
-  const [qaTopK, setQaTopK] = useState(5);
-  const [qaThreshold, setQaThreshold] = useState(0.5);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const res = await fetch(`/api/documents/${documentId}/text`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load document details.");
-      }
-
-      setDocument(data.document);
-      setExtracted(data.extracted);
-
-      try {
-        const cRes = await fetch(`/api/documents/${documentId}/chunks`);
-        if (cRes.ok) {
-          const cData = await cRes.json();
-          setChunksData(cData);
-        }
-      } catch (cErr) {
-        console.warn("Could not fetch chunks:", cErr);
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err.message || "Failed to load document details.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const [, setTicker] = useState(0);
 
+  const fetchData = useCallback(
+    async (isInitial = false) => {
+      if (!documentId) return;
+
+      try {
+        if (isInitial) {
+          setLoading(true);
+        }
+        setError(null);
+
+        const res = await fetch(`/api/documents/${documentId}/text`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load document details.");
+        }
+
+        setDocument(data.document);
+        setExtracted(data.extracted);
+
+        try {
+          const cRes = await fetch(`/api/documents/${documentId}/chunks`);
+          if (cRes.ok) {
+            const cData = await cRes.json();
+            setChunksData(cData);
+          }
+        } catch (cErr) {
+          console.warn("Could not fetch chunks:", cErr);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(err.message || "Failed to load document details.");
+      } finally {
+        if (isInitial) {
+          setLoading(false);
+        }
+      }
+    },
+    [documentId]
+  );
+
+  // Fetch document data once on mount / ID change
   useEffect(() => {
     if (documentId) {
-      fetchData();
-      fetchDocumentConversation();
-
-      const pollInterval = setInterval(() => {
-        fetchData();
-      }, 30000);
-
-      const tickInterval = setInterval(() => {
-        setTicker((t) => t + 1);
-      }, 15000);
-
-      return () => {
-        clearInterval(pollInterval);
-        clearInterval(tickInterval);
-      };
+      fetchData(true);
     }
-  }, [documentId]);
+  }, [documentId, fetchData]);
+
+  // Periodic ticker for expiration countdown recalculation without network polling
+  useEffect(() => {
+    const tickInterval = setInterval(() => {
+      setTicker((t) => t + 1);
+    }, 60000);
+
+    return () => clearInterval(tickInterval);
+  }, []);
 
   const handleProcess = async () => {
     try {
@@ -160,8 +137,7 @@ export default function DocumentDetailsPage() {
         throw new Error(data?.error || "Processing failed.");
       }
 
-      // Re-fetch document and extracted data
-      await fetchData();
+      await fetchData(false);
     } catch (err) {
       console.error("Processing error:", err);
       setError(err.message || "Document text extraction failed.");
@@ -195,164 +171,6 @@ export default function DocumentDetailsPage() {
     navigator.clipboard.writeText(extracted.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSearch = async (e) => {
-    if (e) e.preventDefault();
-    if (!searchQueryText.trim()) return;
-
-    try {
-      setSearching(true);
-      setSearchError(null);
-      const res = await fetch(`/api/documents/${documentId}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: searchQueryText.trim(),
-          topK: Number(topK),
-          threshold: Number(threshold),
-          includeContext: Boolean(includeContext),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to execute semantic search.");
-      }
-
-      setSearchResults(data);
-    } catch (err) {
-      console.error("Semantic search error:", err);
-      setSearchError(err.message || "Failed to execute semantic search.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleCopyContext = () => {
-    if (!searchResults?.context?.contextText) return;
-    navigator.clipboard.writeText(searchResults.context.contextText);
-    setCopiedContext(true);
-    setTimeout(() => setCopiedContext(false), 2000);
-  };
-
-  const fetchDocumentConversation = async () => {
-    if (!documentId) return;
-    try {
-      const res = await fetch(`/api/conversations?documentId=${documentId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.conversations && data.conversations.length > 0) {
-          const latestConv = data.conversations[0];
-          setConversationId(latestConv.id);
-          const mRes = await fetch(`/api/conversations/${latestConv.id}`);
-          if (mRes.ok) {
-            const mData = await mRes.json();
-            setMessagesList(mData.messages || []);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Could not fetch document conversation history:", err);
-    }
-  };
-
-  const handleAskQuestion = async (overrideQuestion) => {
-    const q = (typeof overrideQuestion === "string" ? overrideQuestion : qaQuestion).trim();
-    if (!q || qaLoading) return;
-
-    setLastQaQuestion(q);
-    setQaQuestion("");
-    setQaError(null);
-
-    // Optimistic user message
-    const tempUserMsg = {
-      id: "temp-user-" + Date.now(),
-      role: "user",
-      content: q,
-      createdAt: new Date().toISOString(),
-    };
-    setMessagesList((prev) => [...prev, tempUserMsg]);
-    setQaLoading(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: q,
-          documentId,
-          conversationId,
-          topK: Number(qaTopK),
-          threshold: Number(qaThreshold),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        const errObj = new Error(data.error || "Failed to generate answer.");
-        errObj.code = data.code;
-        errObj.status = res.status;
-        throw errObj;
-      }
-
-      setConversationId(data.conversationId);
-      const assistantMsg = {
-        id: data.assistantMessageId,
-        role: "assistant",
-        content: data.answer,
-        sources: data.sources || [],
-        createdAt: new Date().toISOString(),
-      };
-      setMessagesList((prev) => [...prev, assistantMsg]);
-    } catch (err) {
-      console.error("Ask question error:", err);
-      // Remove optimistic message if query failed so conversation remains clean
-      setMessagesList((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
-      setQaError({
-        message: err.message || "Failed to generate answer.",
-        code: err.code,
-        status: err.status,
-      });
-    } finally {
-      setQaLoading(false);
-    }
-  };
-
-  const toggleSourceExpanded = (msgId, srcNum) => {
-    const key = `${msgId}-${srcNum}`;
-    setExpandedSources((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  const handleSourcePillClick = (msgId, srcNum) => {
-    const key = `${msgId}-${srcNum}`;
-    setExpandedSources((prev) => ({
-      ...prev,
-      [key]: true,
-    }));
-    setTimeout(() => {
-      const el = document.getElementById(`doc-source-${msgId}-${srcNum}`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
-    }, 50);
-  };
-
-  const handleClearChat = async () => {
-    if (!conversationId) {
-      setMessagesList([]);
-      return;
-    }
-    try {
-      await fetch(`/api/conversations/${conversationId}`, { method: "DELETE" });
-      setConversationId(null);
-      setMessagesList([]);
-    } catch (err) {
-      console.error("Error clearing chat:", err);
-    }
   };
 
   const formatFileSize = (bytes) => {
@@ -389,991 +207,342 @@ export default function DocumentDetailsPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <Sidebar />
-
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
-        {/* Navigation Bar */}
-        <header className="min-h-16 h-auto py-2.5 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-slate-600 dark:text-slate-400">
-              <Link href="/documents">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Documents
-              </Link>
-            </Button>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
-            <div className="flex items-center gap-2 truncate max-w-sm sm:max-w-md">
-              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-              <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                {document?.filename || "Document Details"}
-              </h1>
-              {document && (
-                document.isOwner ? (
-                  <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs">
-                    Owner
-                  </Badge>
-                ) : document.role === "write" ? (
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 text-xs">
-                    Editor
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30 text-xs">
-                    Viewer
-                  </Badge>
-                )
-              )}
-              {document && (() => {
-                const countdown = formatExpirationCountdown(document.expiresAt, document.createdAt);
-                return (
-                  <span
-                    className={`text-xs hidden sm:flex items-center gap-1 font-medium ml-1.5 ${
-                      countdown.isExpired
-                        ? "text-rose-600 dark:text-rose-400"
-                        : countdown.isExpiringSoon
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-slate-500 dark:text-slate-400"
-                    }`}
-                    title={countdown.isExpired ? "This document has expired" : `Automatic deletion scheduled in ${countdown.label}`}
-                  >
-                    <Clock className={`w-3.5 h-3.5 ${countdown.isExpired ? "text-rose-500" : countdown.isExpiringSoon ? "text-amber-500 animate-pulse" : "text-amber-600 dark:text-amber-400"}`} />
-                    {countdown.label}
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Share action: Owner only */}
-            {document?.isOwner && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowShareModal(true)}
-                className="gap-1.5"
-              >
-                <Users className="w-3.5 h-3.5" />
-                Share
-              </Button>
+    <DashboardLayout>
+      {/* Top Header */}
+      <header className="min-h-16 h-auto py-2.5 px-4 sm:px-6 shrink-0 border-b border-theme-divider bg-theme-panel/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-theme-muted hover:text-theme-text">
+            <Link href="/documents">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Documents
+            </Link>
+          </Button>
+          <span className="text-theme-divider">|</span>
+          <div className="flex items-center gap-2 truncate max-w-sm sm:max-w-md">
+            <FileText className="w-4 h-4 text-theme-primary shrink-0" />
+            <h1 className="text-sm font-semibold text-theme-text truncate">
+              {document?.filename || "Document Details"}
+            </h1>
+            {document && (
+              document.isOwner ? (
+                <Badge variant="secondary" className="text-xs font-normal">
+                  Owner
+                </Badge>
+              ) : document.role === "write" ? (
+                <Badge variant="outline" className="bg-theme-primary/10 text-theme-primary border-theme-primary/30 text-xs">
+                  Editor
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-theme-muted/10 text-theme-muted border-theme-divider text-xs">
+                  Viewer
+                </Badge>
+              )
             )}
+            {document && (() => {
+              const countdown = formatExpirationCountdown(document.expiresAt, document.createdAt);
+              return (
+                <span
+                  className={`text-xs hidden sm:flex items-center gap-1 font-medium ml-1.5 ${
+                    countdown.isExpired
+                      ? "text-rose-600 dark:text-rose-400"
+                      : countdown.isExpiringSoon
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-theme-muted"
+                  }`}
+                  title={countdown.isExpired ? "This document has expired" : `Automatic deletion scheduled in ${countdown.label}`}
+                >
+                  <Clock className={`w-3.5 h-3.5 ${countdown.isExpired ? "text-rose-500" : countdown.isExpiringSoon ? "text-amber-500" : "text-theme-muted"}`} strokeWidth={1.5} />
+                  {countdown.label}
+                </span>
+              );
+            })()}
+          </div>
+        </div>
 
-            {/* Reprocess action: Owner or Editor allowed; Viewer disabled */}
+        <div className="flex items-center gap-2">
+          {document?.isOwner && (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleProcess}
-              disabled={processing || loading || document?.role === "read"}
-              title={
-                document?.role === "read"
-                  ? "Only the owner or an editor can reprocess this document."
-                  : undefined
-              }
+              onClick={() => setShowShareModal(true)}
               className="gap-1.5"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${processing ? "animate-spin" : ""}`} />
-              {processing
-                ? "Extracting Text..."
-                : document?.processingStatus === "completed"
-                ? "Re-extract Text"
-                : "Process Document"}
+              <Users className="w-3.5 h-3.5" />
+              Share
             </Button>
+          )}
 
-            {/* Delete action: Owner only */}
-            {document?.isOwner && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDeleteModal(true)}
-                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </header>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleProcess}
+            disabled={processing || loading || document?.role === "read"}
+            title={
+              document?.role === "read"
+                ? "Only the owner or an editor can reprocess this document."
+                : undefined
+            }
+            className="gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${processing ? "animate-spin" : ""}`} />
+            {processing
+              ? "Extracting Text..."
+              : document?.processingStatus === "completed"
+              ? "Re-extract Text"
+              : "Process Document"}
+          </Button>
 
-        {/* Content Area */}
-        <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
-          {loading ? (
-            <div className="py-24 text-center space-y-3">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" />
-              <p className="text-xs text-slate-500">Loading document intelligence...</p>
-            </div>
-          ) : error || !document ? (
-            <Card className="p-8 text-center max-w-lg mx-auto space-y-4 border-slate-200 dark:border-slate-800">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Document Unavailable or Expired
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  This document may have exceeded its 24-hour retention lifecycle and been automatically purged, or you may not have permission to view it.
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href="/documents">
-                    <ArrowLeft className="w-4 h-4 mr-1.5" />
-                    Back to Vault
-                  </Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/documents/upload">
-                    <Upload className="w-4 h-4 mr-1.5" />
-                    Upload New File
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <>
-              {/* Document Overview Metadata Card */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {document?.filename}
-                        <Badge variant="outline" className="font-mono uppercase text-xs">
-                          {document?.fileType}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        UUID: <span className="font-mono text-slate-500">{document?.id}</span>
-                      </CardDescription>
-                    </div>
-                    <div>{getStatusBadge(document?.processingStatus)}</div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <HardDrive className="w-3.5 h-3.5" /> File Size
-                      </span>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">
-                        {formatFileSize(document?.fileSize)}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" /> Uploaded
-                      </span>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">
-                        {formatDate(document?.createdAt)}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5" /> Sections / Pages
-                      </span>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">
-                        {extracted?.pageCount ?? "—"}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <FileCode className="w-3.5 h-3.5" /> Word Count
-                      </span>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">
-                        {extracted?.metadata?.wordCount
-                          ? `${extracted.metadata.wordCount.toLocaleString()} words`
-                          : "—"}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-blue-500" /> Vector Chunks
-                      </span>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">
-                        {chunksData?.totalChunks !== undefined
-                          ? `${chunksData.totalChunks} Chunks`
-                          : "—"}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-amber-500" /> Retention
-                      </span>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">
-                        {formatExpirationCountdown(document?.expiresAt, document?.createdAt).label}
-                      </p>
-                    </div>
-                  </div>
-
-                  {document?.errorMessage && (
-                    <div className="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 text-xs">
-                      <strong>Processing Error:</strong> {document.errorMessage}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Extracted Text & Vector Chunks Section */}
-              <Card>
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-                  <div className="space-y-1">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Database className="w-4 h-4 text-blue-600" /> Document Intelligence & Embeddings
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      {chunksData?.totalChunks
-                        ? `${chunksData.totalChunks} semantic chunks with 768-dimensional Gemini embeddings indexed in PostgreSQL.`
-                        : extracted
-                        ? "Text extracted; ready for vector embeddings."
-                        : "No text has been extracted from this document yet."}
-                    </CardDescription>
-                  </div>
-
-                  {extracted && (
-                    <div className="flex items-center gap-2">
-                      {/* View Switcher Tabs */}
-                      <div className="inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 text-xs">
-                        <button
-                          onClick={() => setActiveTab("full")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                            activeTab === "full"
-                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          Full Text
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("pages")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                            activeTab === "pages"
-                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          By Page ({extracted.pages?.length || 0})
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("chunks")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                            activeTab === "chunks"
-                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          Chunks & Vectors ({chunksData?.totalChunks || 0})
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("search")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-                            activeTab === "search"
-                              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          <Search className="w-3.5 h-3.5" />
-                          Semantic Search
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("qa")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-                            activeTab === "qa"
-                              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          Ask AI
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("summary")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-                            activeTab === "summary"
-                              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          Summary
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("metadata")}
-                          className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                            activeTab === "metadata"
-                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                          }`}
-                        >
-                          Metadata
-                        </button>
-                      </div>
-
-                      {activeTab === "full" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleCopy}
-                          className="gap-1.5 text-xs shadow-xs"
-                        >
-                          {copied ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-green-600" />
-                              Copied
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5" />
-                              Copy
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </CardHeader>
-
-                <CardContent className="p-6">
-                  {processing ? (
-                    <div className="py-20 text-center space-y-4">
-                      <div className="relative inline-flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 animate-spin" />
-                        <FileText className="w-5 h-5 text-blue-600 absolute" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          Extracting Text from {document?.filename}...
-                        </h4>
-                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                          Parsing file structure, decoding content, and segmenting sections.
-                        </p>
-                      </div>
-                    </div>
-                  ) : !extracted ? (
-                    <div className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                      <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
-                        <FileText className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                          Ready for Text Extraction
-                        </h4>
-                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                          Click below to execute text extraction pipeline on this {document?.fileType?.toUpperCase()} document.
-                        </p>
-                      </div>
-                      <Button onClick={handleProcess} size="sm" className="gap-2 shadow-sm">
-                        <RefreshCw className="w-4 h-4" />
-                        Process Document Now
-                      </Button>
-                    </div>
-                  ) : activeTab === "full" ? (
-                    <div className="relative">
-                      <div className="max-h-[550px] overflow-y-auto rounded-xl bg-slate-900 p-5 font-mono text-xs text-slate-200 leading-relaxed whitespace-pre-wrap select-text border border-slate-800 shadow-inner">
-                        {extracted.text || (
-                          <span className="text-slate-500 italic">Document text is empty.</span>
-                        )}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-                        <span>Characters: {extracted.metadata?.characterCount?.toLocaleString() ?? 0}</span>
-                        <span>Lines: {extracted.metadata?.lineCount?.toLocaleString() ?? 0}</span>
-                      </div>
-                    </div>
-                  ) : activeTab === "pages" ? (
-                    <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1">
-                      {extracted.pages?.map((page) => (
-                        <div
-                          key={page.pageNumber}
-                          className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs"
-                        >
-                          <div className="bg-slate-50 dark:bg-slate-800/60 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                              Page {page.pageNumber}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              {page.text?.length || 0} characters
-                            </span>
-                          </div>
-                          <div className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                            {page.text || <span className="text-slate-400 italic">Empty page content</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : activeTab === "chunks" ? (
-                    <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1">
-                      {!chunksData?.chunks || chunksData.chunks.length === 0 ? (
-                        <div className="p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
-                          <p className="text-xs text-slate-500">
-                            No vector chunks available. Click &quot;Re-extract Text&quot; or &quot;Process Document&quot; to generate chunks and 768-dim embeddings.
-                          </p>
-                        </div>
-                      ) : (
-                        chunksData.chunks.map((chunk) => (
-                          <div
-                            key={chunk.id}
-                            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs"
-                          >
-                            <div className="bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                  Chunk #{chunk.chunkIndex + 1}
-                                </span>
-                                <Badge variant="outline" className="text-[10px]">
-                                  {chunk.pageNumber !== null ? `Page ${chunk.pageNumber}` : "Document Content"}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                                <span>{chunk.characterCount} chars</span>
-                                <span>•</span>
-                                <span>~{chunk.estimatedTokenCount} tokens (est.)</span>
-                                <span>•</span>
-                                <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1">
-                                  <Check className="w-2.5 h-2.5" />
-                                  768-dim vector
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed select-text">
-                              {chunk.content}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ) : activeTab === "search" ? (
-                    <div className="space-y-6">
-                      {/* Search Input and Configuration Controls */}
-                      <form onSubmit={handleSearch} className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <div className="relative flex-1">
-                            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                            <Input
-                              placeholder="Search document semantically (e.g. 'quarterly revenue', 'security requirements')..."
-                              value={searchQueryText}
-                              onChange={(e) => setSearchQueryText(e.target.value)}
-                              className="pl-9 h-10 text-sm"
-                            />
-                          </div>
-                          <Button
-                            type="submit"
-                            disabled={searching || !searchQueryText.trim()}
-                            className="gap-2 shrink-0"
-                          >
-                            {searching ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Searching...
-                              </>
-                            ) : (
-                              <>
-                                <Search className="w-4 h-4" />
-                                Vector Search
-                              </>
-                            )}
-                          </Button>
-                        </div>
-
-                        {/* Search Parameters Controls */}
-                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
-                          <div className="flex items-center gap-6 flex-wrap">
-                            {/* Top K */}
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-600 dark:text-slate-400">
-                                Top-K Chunks:
-                              </span>
-                              <select
-                                value={topK}
-                                onChange={(e) => setTopK(Number(e.target.value))}
-                                className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5"
-                              >
-                                <option value={3}>3 chunks</option>
-                                <option value={5}>5 chunks (default)</option>
-                                <option value={10}>10 chunks</option>
-                                <option value={20}>20 chunks (max)</option>
-                              </select>
-                            </div>
-
-                            {/* Threshold */}
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-600 dark:text-slate-400">
-                                Min Similarity Threshold:
-                              </span>
-                              <input
-                                type="range"
-                                min="0.0"
-                                max="1.0"
-                                step="0.05"
-                                value={threshold}
-                                onChange={(e) => setThreshold(Number(e.target.value))}
-                                className="w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                              />
-                              <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 w-8">
-                                {Number(threshold).toFixed(2)}
-                              </span>
-                            </div>
-
-                            {/* RAG Context Assembly */}
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={includeContext}
-                                onChange={(e) => setIncludeContext(e.target.checked)}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                              />
-                              <span className="text-slate-700 dark:text-slate-300 font-medium">
-                                Assemble RAG Context Block
-                              </span>
-                            </label>
-                          </div>
-
-                          <div className="text-[11px] text-slate-400 font-mono">
-                            pgvector &lt;=&gt; cosine distance • 768-dim
-                          </div>
-                        </div>
-                      </form>
-
-                      {/* Error Alert */}
-                      {searchError && (
-                        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>{searchError}</span>
-                        </div>
-                      )}
-
-                      {/* Search Results Display */}
-                      {searchResults && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
-                            <span className="font-medium text-slate-700 dark:text-slate-300">
-                              Retrieved {searchResults.count} chunk{searchResults.count === 1 ? "" : "s"} for query &quot;{searchResults.query}&quot;
-                            </span>
-                            <Badge variant="outline" className="text-[10px]">
-                              Threshold: &gt;= {searchResults.threshold}
-                            </Badge>
-                          </div>
-
-                          {searchResults.count === 0 ? (
-                            <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
-                              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                No matching chunks found
-                              </p>
-                              <p className="text-xs text-slate-500 max-w-md mx-auto">
-                                No chunks met the minimum similarity score of {searchResults.threshold}. Try lowering the similarity threshold or using different keywords.
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {searchResults.results.map((chunk, idx) => (
-                                <div
-                                  key={chunk.chunkId}
-                                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
-                                >
-                                  <div className="bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                        Rank #{idx + 1} • Chunk #{chunk.chunkIndex + 1}
-                                      </span>
-                                      <Badge variant="outline" className="text-[10px]">
-                                        {chunk.pageNumber !== null ? `Page ${chunk.pageNumber}` : "General Section"}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Badge
-                                        variant="default"
-                                        className="text-[11px] font-mono py-0.5 px-2 bg-blue-600 text-white"
-                                      >
-                                        {(chunk.similarityScore * 100).toFixed(1)}% Match
-                                      </Badge>
-                                      <span className="text-[11px] text-slate-400">
-                                        ~{chunk.estimatedTokenCount} tokens (est.)
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed select-text">
-                                    {chunk.content}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Assembled RAG Prompt Context Block */}
-                          {searchResults.context && (
-                            <div className="mt-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-900 text-slate-200 overflow-hidden shadow-md">
-                              <div className="bg-slate-800/80 px-4 py-3 border-b border-slate-700 flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="w-4 h-4 text-blue-400" />
-                                  <span className="text-xs font-semibold text-white">
-                                    Assembled RAG Prompt Context (LLM-Ready)
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-xs">
-                                  <span className="text-slate-400">
-                                    Budget: ~{searchResults.context.totalEstimatedTokens} tokens (est.)
-                                  </span>
-                                  <span className="text-slate-400">
-                                    Used: {searchResults.context.chunksUsed} chunks
-                                  </span>
-                                  {searchResults.context.chunksOmitted > 0 && (
-                                    <span className="text-amber-400">
-                                      Omitted: {searchResults.context.chunksOmitted} (budget limit)
-                                    </span>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleCopyContext}
-                                    className="h-7 text-xs bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 gap-1.5"
-                                  >
-                                    {copiedContext ? (
-                                      <>
-                                        <Check className="w-3 h-3 text-green-400" />
-                                        Copied
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Copy className="w-3 h-3" />
-                                        Copy Context
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
-                              </div>
-                              <div className="p-4 text-xs font-mono text-slate-300 max-h-80 overflow-y-auto whitespace-pre-wrap leading-relaxed select-text">
-                                {searchResults.context.contextText || (
-                                  <span className="text-slate-500 italic">No context generated.</span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : activeTab === "qa" ? (
-                    <div className="space-y-4">
-                      {/* Q&A Controls Bar */}
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-2">
-                          <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            Grounded Document Intelligence
-                          </span>
-                          <Badge variant="outline" className="text-[10px] font-mono">
-                            gemini-3.8-flash
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center gap-4 flex-wrap">
-                          {/* Top K */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-slate-500">Top-K Chunks:</span>
-                            <select
-                              value={qaTopK}
-                              onChange={(e) => setQaTopK(Number(e.target.value))}
-                              className="h-7 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5"
-                            >
-                              <option value={3}>3</option>
-                              <option value={5}>5 (default)</option>
-                              <option value={10}>10</option>
-                            </select>
-                          </div>
-
-                          {/* Threshold */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-slate-500">Min Score:</span>
-                            <input
-                              type="range"
-                              min="0.0"
-                              max="1.0"
-                              step="0.05"
-                              value={qaThreshold}
-                              onChange={(e) => setQaThreshold(Number(e.target.value))}
-                              className="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                            />
-                            <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                              {Number(qaThreshold).toFixed(2)}
-                            </span>
-                          </div>
-
-                          {messagesList.length > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleClearChat}
-                              className="h-7 text-xs text-slate-500 hover:text-red-600"
-                            >
-                              Clear Chat
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Messages Thread Container */}
-                      <div className="min-h-[380px] max-h-[520px] overflow-y-auto space-y-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
-                        {messagesList.length === 0 ? (
-                          <div className="py-12 text-center space-y-4">
-                            <div className="h-12 w-12 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
-                              <Bot className="w-6 h-6" />
-                            </div>
-                            <div className="space-y-1">
-                              <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                Ask anything about {document?.filename}
-                              </h4>
-                              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                                Answers are strictly synthesized from retrieved document chunks with verifiable source citations.
-                              </p>
-                            </div>
-
-                            {/* Suggested Starter Questions */}
-                            <div className="pt-2 flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
-                              {[
-                                "What is the primary summary of this document?",
-                                "What are the key conclusions or findings?",
-                                "List important figures, metrics, or dates mentioned.",
-                              ].map((suggestedQ, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleAskQuestion(suggestedQ)}
-                                  className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors shadow-2xs text-left"
-                                >
-                                  {suggestedQ}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          messagesList.map((msg, idx) => (
-                            <div
-                              key={msg.id || idx}
-                              className={`flex flex-col ${
-                                msg.role === "user" ? "items-end" : "items-start"
-                              }`}
-                            >
-                              <div
-                                className={`max-w-[85%] rounded-2xl p-4 text-xs ${
-                                  msg.role === "user"
-                                    ? "bg-blue-600 text-white rounded-br-xs shadow-xs"
-                                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-xs shadow-xs"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 mb-1.5 opacity-80 text-[10px] font-semibold">
-                                  {msg.role === "user" ? (
-                                    <>
-                                      <User className="w-3 h-3" />
-                                      <span>You</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Bot className="w-3.5 h-3.5 text-blue-500" />
-                                      <span>DocuMind AI</span>
-                                    </>
-                                  )}
-                                </div>
-
-                                 <ChatMessageContent
-                                  content={msg.content}
-                                  isUser={msg.role === "user"}
-                                  onSourceClick={(srcNum) =>
-                                    handleSourcePillClick(msg.id, srcNum)
-                                  }
-                                />
-
-                                {/* Source Citations Container */}
-                                {msg.sources && msg.sources.length > 0 && (
-                                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2">
-                                    <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1.5">
-                                      <FileText className="w-3 h-3 text-blue-500" />
-                                      <span>
-                                        Grounded in {msg.sources.length} document source
-                                        {msg.sources.length === 1 ? "" : "s"}:
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col gap-1.5">
-                                      {msg.sources.map((src) => {
-                                        const isExp =
-                                          expandedSources[`${msg.id}-${src.sourceNumber}`];
-                                        return (
-                                          <div
-                                            key={src.sourceNumber}
-                                            id={`doc-source-${msg.id}-${src.sourceNumber}`}
-                                            className="rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/60 text-[11px] overflow-hidden"
-                                          >
-                                            <div
-                                              onClick={() =>
-                                                toggleSourceExpanded(msg.id, src.sourceNumber)
-                                              }
-                                              className="p-2 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
-                                            >
-                                              <div className="flex items-center gap-2 truncate">
-                                                <Badge
-                                                  variant="default"
-                                                  className="text-[10px] py-0 px-1.5 bg-blue-600 text-white font-mono"
-                                                >
-                                                  SOURCE {src.sourceNumber}
-                                                </Badge>
-                                                <span className="font-medium text-slate-700 dark:text-slate-300">
-                                                  {src.pageNumber !== null
-                                                    ? `Page ${src.pageNumber}`
-                                                    : "General Section"}
-                                                </span>
-                                                <span className="text-slate-400 text-[10px]">
-                                                  Chunk #{src.chunkIndex + 1}
-                                                </span>
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <Badge
-                                                  variant="outline"
-                                                  className="text-[10px] py-0"
-                                                >
-                                                  {(src.similarityScore * 100).toFixed(1)}% Match
-                                                </Badge>
-                                                {isExp ? (
-                                                  <ChevronUp className="w-3 h-3 text-slate-400" />
-                                                ) : (
-                                                  <ChevronDown className="w-3 h-3 text-slate-400" />
-                                                )}
-                                              </div>
-                                            </div>
-                                            {isExp && (
-                                              <div className="p-3 border-t border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-950 font-mono text-[10px] text-slate-600 dark:text-slate-400 whitespace-pre-wrap select-text leading-relaxed">
-                                                {src.content || "(Grounded passage excerpt)"}
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        )}
-
-                        {qaLoading && (
-                          <div className="flex items-start gap-2">
-                            <div className="rounded-2xl p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 rounded-bl-xs shadow-xs flex items-center gap-2">
-                              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                              <span>Synthesizing grounded answer with Gemini 3.8 Flash...</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Error Alert */}
-                      {qaError && (() => {
-                        const errMsg = typeof qaError === "string" ? qaError : qaError.message;
-                        const errCode = qaError?.code;
-                        const isHighDemand =
-                          errCode === "UPSTREAM_HIGH_DEMAND" ||
-                          qaError?.status === 503 ||
-                          errMsg?.toLowerCase().includes("high traffic") ||
-                          errMsg?.toLowerCase().includes("high demand") ||
-                          errMsg?.toLowerCase().includes("unavailable");
-                        const isRateLimit =
-                          errCode === "UPSTREAM_RATE_LIMITED" ||
-                          qaError?.status === 429 ||
-                          errMsg?.toLowerCase().includes("rate limit");
-
-                        const isAmber = isHighDemand || isRateLimit;
-
-                        return (
-                          <div
-                            className={`p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
-                              isAmber
-                                ? "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200"
-                                : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300"
-                            }`}
-                          >
-                            <div className="flex items-start gap-2.5">
-                              <AlertCircle
-                                className={`w-4 h-4 shrink-0 mt-0.5 ${
-                                  isAmber
-                                    ? "text-amber-600 dark:text-amber-400"
-                                    : "text-red-600 dark:text-red-400"
-                                }`}
-                              />
-                              <div>
-                                <p className="font-semibold text-[13px]">
-                                  {isHighDemand
-                                    ? "AI Service Temporarily Busy"
-                                    : isRateLimit
-                                    ? "Rate Limit Reached"
-                                    : "Query Failed"}
-                                </p>
-                                <p className="mt-0.5 opacity-90 leading-relaxed">{errMsg}</p>
-                              </div>
-                            </div>
-
-                            {lastQaQuestion && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAskQuestion(lastQaQuestion)}
-                                disabled={qaLoading}
-                                className={`shrink-0 text-xs gap-1.5 font-medium ${
-                                  isAmber
-                                    ? "border-amber-300 dark:border-amber-800 bg-amber-100/50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-100"
-                                    : "border-red-300 dark:border-red-800 bg-red-100/50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100"
-                                }`}
-                              >
-                                <RefreshCw className="w-3.5 h-3.5" />
-                                <span>Retry</span>
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Question Input Form */}
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          handleAskQuestion();
-                        }}
-                        className="flex gap-2"
-                      >
-                        <div className="relative flex-1">
-                          <Input
-                            placeholder={`Ask a question about ${document?.filename || "this document"}...`}
-                            value={qaQuestion}
-                            onChange={(e) => setQaQuestion(e.target.value)}
-                            disabled={qaLoading}
-                            className="h-10 text-xs pl-3 pr-10"
-                          />
-                        </div>
-                        <Button
-                          type="submit"
-                          disabled={qaLoading || !qaQuestion.trim()}
-                          className="h-10 px-4 gap-1.5 shrink-0"
-                        >
-                          {qaLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="w-3.5 h-3.5" />
-                              <span>Ask</span>
-                            </>
-                          )}
-                        </Button>
-                      </form>
-                    </div>
-                  ) : activeTab === "summary" ? (
-                    <SummaryTab documentId={documentId} document={document} />
-                  ) : (
-                    <div className="rounded-xl bg-slate-900 p-5 font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">
-                      <pre>{JSON.stringify(extracted?.metadata || {}, null, 2)}</pre>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </>
+          {document?.isOwner && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteModal(true)}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
         </div>
+      </header>
+
+      {/* Main Content Body */}
+      <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
+        {loading ? (
+          <div className="py-24 text-center space-y-3">
+            <Loader2 className="w-8 h-8 text-theme-primary animate-spin mx-auto" />
+            <p className="text-xs text-theme-muted">Loading document intelligence...</p>
+          </div>
+        ) : error || !document ? (
+          <Card className="p-8 text-center max-w-lg mx-auto space-y-4 border-theme-divider">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-theme-text">
+                Document Unavailable or Expired
+              </h3>
+              <p className="text-xs text-theme-muted leading-relaxed">
+                This document may have exceeded its 24-hour retention lifecycle and been automatically purged, or you may not have permission to view it.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/documents">
+                  <ArrowLeft className="w-4 h-4 mr-1.5" />
+                  Back to Vault
+                </Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/documents/upload">
+                  <Upload className="w-4 h-4 mr-1.5" />
+                  Upload New File
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <>
+            {/* Overview Metadata Card */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="truncate">{document?.filename}</span>
+                      <Badge variant="outline" className="font-mono uppercase text-xs shrink-0">
+                        {document?.fileType}
+                      </Badge>
+                    </CardTitle>
+                  </div>
+                  <div>{getStatusBadge(document?.processingStatus)}</div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-xs pt-4 border-t border-theme-divider">
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-theme-muted flex items-center gap-1.5 truncate">
+                      <HardDrive className="w-3.5 h-3.5 shrink-0" /> File Size
+                    </span>
+                    <p className="font-medium text-theme-text truncate">
+                      {formatFileSize(document?.fileSize)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-theme-muted flex items-center gap-1.5 truncate">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" /> Uploaded
+                    </span>
+                    <p className="font-medium text-theme-text truncate">
+                      {formatDate(document?.createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-theme-muted flex items-center gap-1.5 truncate">
+                      <Layers className="w-3.5 h-3.5 shrink-0" /> Sections / Pages
+                    </span>
+                    <p className="font-medium text-theme-text truncate">
+                      {extracted?.pageCount ?? "—"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-theme-muted flex items-center gap-1.5 truncate">
+                      <FileCode className="w-3.5 h-3.5 shrink-0" /> Word Count
+                    </span>
+                    <p className="font-medium text-theme-text truncate">
+                      {extracted?.metadata?.wordCount
+                        ? `${extracted.metadata.wordCount.toLocaleString()} words`
+                        : "—"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-theme-muted flex items-center gap-1.5 truncate">
+                      <Layers className="w-3.5 h-3.5 text-theme-primary shrink-0" /> Chunks
+                    </span>
+                    <p className="font-medium text-theme-text truncate">
+                      {chunksData?.totalChunks !== undefined
+                        ? `${chunksData.totalChunks} Chunks`
+                        : "—"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-theme-muted flex items-center gap-1.5 truncate">
+                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Retention
+                    </span>
+                    <p className="font-medium text-theme-text truncate">
+                      {formatExpirationCountdown(document?.expiresAt, document?.createdAt).label}
+                    </p>
+                  </div>
+                </div>
+
+                {document?.errorMessage && (
+                  <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs">
+                    <strong>Processing Error:</strong> {document.errorMessage}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Extracted Text & Analysis Section */}
+            <Card>
+              <CardHeader className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-theme-divider pb-4">
+                <div className="space-y-1">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-theme-primary" /> Document Content & Analysis
+                  </CardTitle>
+                </div>
+
+                {extracted && (
+                  <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end overflow-hidden">
+                    <div className="flex items-center gap-1 rounded-lg bg-theme-body border border-theme-divider p-1 text-xs overflow-x-auto whitespace-nowrap max-w-full scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                      {[
+                        { id: "full", label: "Full Text" },
+                        { id: "pages", label: `By Page (${extracted.pages?.length || 0})` },
+                        { id: "chunks", label: `Chunks (${chunksData?.totalChunks || 0})` },
+                        { id: "search", label: "Semantic Search", icon: Search },
+                        { id: "qa", label: "Ask AI", icon: MessageSquare },
+                        { id: "summary", label: "Summary", icon: FileText },
+                        { id: "metadata", label: "Metadata" },
+                      ].map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`shrink-0 px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                              isActive
+                                ? "bg-theme-panel text-theme-primary shadow-xs"
+                                : "text-theme-muted hover:text-theme-text"
+                            }`}
+                          >
+                            {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
+                            <span>{tab.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {activeTab === "full" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopy}
+                        className="gap-1.5 text-xs shadow-xs shrink-0"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardHeader>
+
+              <CardContent className="p-6">
+                {processing ? (
+                  <div className="py-20 text-center space-y-4">
+                    <div className="relative inline-flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full border-4 border-theme-divider border-t-theme-primary animate-spin" />
+                      <FileText className="w-5 h-5 text-theme-primary absolute" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold text-theme-text">
+                        Extracting Text from {document?.filename}...
+                      </h4>
+                      <p className="text-xs text-theme-muted max-w-sm mx-auto">
+                        Parsing file structure, decoding content, and segmenting sections.
+                      </p>
+                    </div>
+                  </div>
+                ) : !extracted ? (
+                  <div className="p-12 text-center border-2 border-dashed border-theme-divider rounded-2xl space-y-4">
+                    <div className="h-12 w-12 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mx-auto">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold text-theme-text">
+                        Ready for Text Extraction
+                      </h4>
+                      <p className="text-xs text-theme-muted max-w-sm mx-auto">
+                        Click below to execute text extraction pipeline on this {document?.fileType?.toUpperCase()} document.
+                      </p>
+                    </div>
+                    <Button onClick={handleProcess} size="sm" className="gap-2 shadow-sm">
+                      <RefreshCw className="w-4 h-4" />
+                      Process Document Now
+                    </Button>
+                  </div>
+                ) : activeTab === "full" ? (
+                  <TextTab extracted={extracted} viewMode="full" />
+                ) : activeTab === "pages" ? (
+                  <TextTab extracted={extracted} viewMode="pages" />
+                ) : activeTab === "chunks" ? (
+                  <ChunksTab chunksData={chunksData} />
+                ) : activeTab === "search" ? (
+                  <SearchTab documentId={documentId} />
+                ) : activeTab === "qa" ? (
+                  <QaTab documentId={documentId} filename={document?.filename} />
+                ) : activeTab === "summary" ? (
+                  <SummaryTab documentId={documentId} document={document} />
+                ) : (
+                  <MetadataTab metadata={extracted?.metadata} />
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -1383,7 +552,7 @@ export default function DocumentDetailsPage() {
             <DialogTitle>Delete Document</DialogTitle>
             <DialogDescription>
               Are you sure you want to permanently delete{" "}
-              <strong className="text-slate-900 dark:text-slate-100">
+              <strong className="text-theme-text">
                 {document?.filename}
               </strong>
               ? This action cannot be undone.
@@ -1421,8 +590,8 @@ export default function DocumentDetailsPage() {
         onClose={() => setShowShareModal(false)}
         documentId={documentId}
         documentTitle={document?.filename}
-        onPermissionsUpdated={fetchData}
+        onPermissionsUpdated={() => fetchData(false)}
       />
-    </div>
+    </DashboardLayout>
   );
 }

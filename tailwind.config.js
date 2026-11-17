@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./src/pages/**/*.{js,jsx}",
     "./src/components/**/*.{js,jsx}",
@@ -8,6 +8,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        theme: {
+          body: "var(--bg-body)",
+          panel: "var(--bg-panel)",
+          divider: "var(--border-divider)",
+          text: "var(--text-main)",
+          muted: "var(--text-muted)",
+          primary: "var(--bg-primary)",
+          primaryHover: "var(--bg-primary-hover)",
+          primaryBtn: "var(--text-primary-btn)",
+          ai: "var(--bg-ai)",
+          aiHover: "var(--bg-ai-hover)",
+          aiAccent: "var(--text-ai-accent)",
+        },
         background: "var(--background)",
         surface: "var(--surface)",
         foreground: "var(--foreground)",
@@ -16,7 +29,18 @@ module.exports = {
           foreground: "var(--muted-foreground)",
         },
         border: "var(--border)",
-        primary: "var(--primary)",
+        primary: {
+          DEFAULT: "var(--primary)",
+          hover: "var(--primary-hover)",
+          foreground: "var(--primary-foreground)",
+        },
+        ai: {
+          DEFAULT: "var(--ai)",
+          hover: "var(--ai-hover)",
+          foreground: "var(--ai-foreground)",
+          surface: "var(--ai-surface)",
+          border: "var(--ai-border)",
+        },
       },
     },
   },

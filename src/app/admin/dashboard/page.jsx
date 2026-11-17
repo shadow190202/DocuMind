@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { StatCard } from "@/components/admin/stat-card";
 import {
@@ -59,13 +59,11 @@ export default function AdminDashboardPage() {
   const charts = data?.charts;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      <Sidebar />
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
-        <AdminHeader
-          title="Admin Overview & Telemetry"
-          subtitle="Real-time system metrics, AI operations, and platform health"
-        />
+    <DashboardLayout>
+      <AdminHeader
+        title="Admin Overview & Telemetry"
+        subtitle="Real-time system metrics, AI operations, and platform health"
+      />
 
         <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
           {/* Controls & Time Range Filter */}
@@ -87,11 +85,11 @@ export default function AdminDashboardPage() {
                     onClick={() => setTimeRange(t)}
                     className={`px-3 py-1 rounded-md transition-colors ${
                       timeRange === t
-                        ? "bg-purple-600 text-white font-semibold"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-medium"
                         : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                     }`}
                   >
-                    {t.toUpperCase()}
+                    {t}
                   </button>
                 ))}
               </div>
@@ -194,7 +192,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <AdminAreaChart
                   data={charts?.uploadsTimeline || []}
-                  color="purple"
+                  color="blue"
                   label="documents"
                   height={220}
                 />
@@ -215,7 +213,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <AdminAreaChart
                   data={charts?.questionsTimeline || []}
-                  color="indigo"
+                  color="violet"
                   label="questions"
                   height={220}
                 />
@@ -287,7 +285,6 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

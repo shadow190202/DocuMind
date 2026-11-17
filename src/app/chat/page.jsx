@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -249,36 +249,31 @@ function ChatContent() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      {/* Universal Sidebar */}
-      <Sidebar />
-
-      {/* Main Chat Interface */}
-      <div className="flex-1 flex min-w-0 w-full overflow-hidden">
-        {/* Left Sub-Sidebar: Conversations Thread List */}
-        <div className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 hidden md:flex">
+    <DashboardLayout fullBleed className="flex-row">
+      {/* Left Sub-Sidebar: Conversations Thread List */}
+        <div className="w-64 border-r border-theme-divider bg-theme-panel flex flex-col shrink-0 hidden md:flex">
           {/* Action Header */}
-          <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="p-3 border-b border-theme-divider">
             <Button
               onClick={startNewChat}
               variant="outline"
               size="sm"
               className="w-full justify-start gap-2 shadow-sm font-medium text-xs"
             >
-              <Plus className="w-4 h-4 text-blue-600" />
+              <Plus className="w-4 h-4 text-theme-primary" />
               New Chat
             </Button>
           </div>
 
           {/* Conversations History Scrollable Area */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            <div className="px-2 py-1 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="px-2 py-1 flex items-center justify-between text-[11px] font-semibold text-theme-muted uppercase tracking-wider">
               <span>Recent Chats</span>
-              {loadingConv && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+              {loadingConv && <Loader2 className="w-3 h-3 animate-spin text-theme-muted" />}
             </div>
 
             {conversationsList.length === 0 && !loadingConv ? (
-              <div className="text-center py-8 px-3 text-slate-400 text-xs">
+              <div className="text-center py-8 px-3 text-theme-muted text-xs">
                 No past conversations yet.
               </div>
             ) : (
@@ -288,13 +283,13 @@ function ChatContent() {
                   onClick={() => selectConversation(conv.id)}
                   className={`group p-2.5 rounded-xl cursor-pointer text-xs flex items-center justify-between transition-colors ${
                     activeConversationId === conv.id
-                      ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 font-medium"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                      ? "bg-theme-primary/10 text-theme-primary border border-theme-primary/30 font-medium"
+                      : "text-theme-muted hover:bg-theme-body hover:text-theme-text"
                   }`}
                 >
                   <div className="truncate flex-1 pr-2">
                     <p className="truncate">{conv.title || "Untitled Chat"}</p>
-                    <span className="text-[10px] text-slate-400 block truncate">
+                    <span className="text-[10px] text-theme-muted block truncate">
                       {conv.documentName ? conv.documentName : "Vault-Wide"}
                     </span>
                   </div>
@@ -306,7 +301,7 @@ function ChatContent() {
                         setRenameTarget(conv);
                       }}
                       title="Rename conversation"
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                      className="p-1 rounded-md text-theme-muted hover:text-theme-text"
                     >
                       <Edit3 className="w-3 h-3" />
                     </button>
@@ -316,7 +311,7 @@ function ChatContent() {
                         setDeleteTarget(conv);
                       }}
                       title="Delete conversation"
-                      className="p-1 rounded-md text-slate-400 hover:text-rose-600"
+                      className="p-1 rounded-md text-theme-muted hover:text-rose-600"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -328,29 +323,29 @@ function ChatContent() {
         </div>
 
         {/* Right Active Chat Workspace */}
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
+        <div className="flex-1 flex flex-col min-w-0 bg-theme-body">
           {/* Header */}
-          <header className="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between gap-4">
+          <header className="h-16 shrink-0 border-b border-theme-divider bg-theme-panel/80 backdrop-blur-md px-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 truncate min-w-0">
-              <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 rounded-lg bg-theme-ai/10 text-theme-aiAccent border border-theme-ai/20 flex items-center justify-center shrink-0">
                 <MessageSquare className="w-4 h-4" />
               </div>
               <div className="truncate min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                  <h1 className="text-sm font-bold text-theme-text truncate">
                     {activeConv ? activeConv.title : "Vault-Wide Knowledge Assistant"}
                   </h1>
                   {activeConv && (
                     <button
                       onClick={() => setRenameTarget(activeConv)}
                       title="Rename conversation"
-                      className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      className="p-1 rounded text-theme-muted hover:text-theme-text hover:bg-theme-body transition-colors"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 truncate">
+                <p className="text-[11px] text-theme-muted truncate">
                   {activeConv?.documentName
                     ? `Scoped to ${activeConv.documentName}`
                     : "Grounded Q&A powered by Gemini 3.8 Flash & pgvector retrieval"}
@@ -373,13 +368,13 @@ function ChatContent() {
                   </Button>
 
                   {showExportMenu && (
-                    <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg py-1 z-20 text-xs animate-in fade-in duration-100">
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-theme-panel border border-theme-divider rounded-lg shadow-lg py-1 z-20 text-xs animate-in fade-in duration-100">
                       <button
                         onClick={() => {
                           setShowExportMenu(false);
                           window.location.href = `/api/conversations/${activeConversationId}/export?format=markdown`;
                         }}
-                        className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-theme-text hover:bg-theme-body flex items-center gap-2"
                       >
                         <span>Markdown (.md)</span>
                       </button>
@@ -388,7 +383,7 @@ function ChatContent() {
                           setShowExportMenu(false);
                           window.location.href = `/api/conversations/${activeConversationId}/export?format=json`;
                         }}
-                        className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-theme-text hover:bg-theme-body flex items-center gap-2"
                       >
                         <span>JSON (.json)</span>
                       </button>
@@ -399,11 +394,11 @@ function ChatContent() {
 
               {/* Scope Filter Dropdown */}
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-500 hidden sm:inline">Scope:</span>
+                <span className="text-xs text-theme-muted hidden sm:inline">Scope:</span>
                 <select
                   value={selectedDocId}
                   onChange={(e) => setSelectedDocId(e.target.value)}
-                  className="h-9 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 max-w-[180px] truncate shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-9 text-xs rounded-lg border border-theme-divider bg-theme-panel text-theme-text px-2.5 py-1 max-w-[180px] truncate shadow-xs focus:outline-none focus:ring-2 focus:ring-theme-primary"
                 >
                   <option value="">Entire Document Vault</option>
                   {documentsList.map((doc) => (
@@ -420,14 +415,14 @@ function ChatContent() {
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full">
             {messages.length === 0 ? (
               <div className="py-20 text-center space-y-4 max-w-md mx-auto">
-                <div className="h-14 w-14 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-sm">
+                <div className="h-14 w-14 rounded-2xl bg-theme-ai/10 text-theme-aiAccent border border-theme-ai/20 flex items-center justify-center mx-auto shadow-xs">
                   <Bot className="w-7 h-7" />
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  <h3 className="text-sm font-bold text-theme-text">
                     Ask your Document Vault
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
+                  <p className="text-xs text-theme-muted leading-relaxed">
                     Ask natural-language questions across your uploaded documents. Answers are strictly grounded in retrieved passages with verifiable citations.
                   </p>
                 </div>
@@ -442,10 +437,10 @@ function ChatContent() {
                     <button
                       key={i}
                       onClick={() => handleAsk(starter)}
-                      className="p-3 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-600 transition-colors shadow-sm text-left flex items-center justify-between"
+                      className="p-3 text-xs rounded-xl bg-theme-panel border border-theme-divider text-theme-muted hover:border-theme-ai/40 hover:text-theme-aiAccent transition-colors shadow-xs text-left flex items-center justify-between"
                     >
                       <span className="truncate">{starter}</span>
-                      <Terminal className="w-3.5 h-3.5 shrink-0 text-blue-500 ml-2" />
+                      <Terminal className="w-3.5 h-3.5 shrink-0 text-theme-aiAccent ml-2" />
                     </button>
                   ))}
                 </div>
@@ -459,16 +454,16 @@ function ChatContent() {
                     className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                   >
                     {!isUser && (
-                      <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                        <Bot className="w-4 h-4" />
+                      <div className="h-8 w-8 rounded-lg bg-theme-ai/20 text-theme-aiAccent border border-theme-ai/30 flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                        <Bot className="w-4 h-4 text-theme-aiAccent" />
                       </div>
                     )}
 
                     <div
                       className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed space-y-3 shadow-sm ${
                         isUser
-                          ? "bg-blue-600 text-white rounded-tr-sm"
-                          : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm"
+                          ? "bg-theme-panel border border-theme-divider text-theme-text rounded-tr-sm"
+                          : "bg-theme-ai/10 border border-theme-ai/20 text-theme-text rounded-tl-sm"
                       }`}
                     >
                       {/* Message Content Body */}
@@ -480,9 +475,9 @@ function ChatContent() {
 
                       {/* Source Citations Accordion (Assistant Only) */}
                       {!isUser && Array.isArray(msg.sources) && msg.sources.length > 0 && (
-                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        <div className="pt-3 border-t border-theme-divider space-y-2">
+                          <p className="text-[11px] font-semibold text-theme-muted flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-theme-aiAccent" />
                             Grounded Sources ({msg.sources.length}):
                           </p>
 
@@ -494,11 +489,11 @@ function ChatContent() {
                                 <div
                                   key={src.sourceNumber}
                                   id={`source-${msg.id}-${src.sourceNumber}`}
-                                  className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-2.5 text-[11px]"
+                                  className="rounded-lg border border-theme-divider bg-theme-body/60 p-2.5 text-[11px]"
                                 >
                                   <div
                                     onClick={() => toggleSource(msg.id, src.sourceNumber)}
-                                    className="flex items-center justify-between cursor-pointer font-medium text-slate-700 dark:text-slate-300"
+                                    className="flex items-center justify-between cursor-pointer font-medium text-theme-text"
                                   >
                                     <div className="flex items-center gap-2 truncate">
                                       <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
@@ -506,7 +501,7 @@ function ChatContent() {
                                       </Badge>
                                       <span className="truncate">{src.documentName}</span>
                                       {src.pageNumber && (
-                                        <span className="text-slate-400">
+                                        <span className="text-theme-muted">
                                           (Page {src.pageNumber})
                                         </span>
                                       )}
@@ -516,15 +511,15 @@ function ChatContent() {
                                         {Math.round(src.similarityScore * 100)}% match
                                       </Badge>
                                       {isExpanded ? (
-                                        <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                                        <ChevronUp className="w-3.5 h-3.5 text-theme-muted" />
                                       ) : (
-                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                        <ChevronDown className="w-3.5 h-3.5 text-theme-muted" />
                                       )}
                                     </div>
                                   </div>
 
                                   {isExpanded && src.chunkContent && (
-                                    <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60 text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-mono text-[10.5px] leading-normal bg-white dark:bg-slate-900 p-2 rounded">
+                                    <div className="mt-2 pt-2 border-t border-theme-divider text-theme-text whitespace-pre-wrap font-mono text-[10.5px] leading-normal bg-theme-panel p-2 rounded">
                                       {src.chunkContent}
                                     </div>
                                   )}
@@ -537,7 +532,7 @@ function ChatContent() {
                     </div>
 
                     {isUser && (
-                      <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="h-8 w-8 rounded-lg bg-theme-body border border-theme-divider text-theme-text flex items-center justify-center shrink-0 mt-0.5">
                         <User className="w-4 h-4" />
                       </div>
                     )}
@@ -549,11 +544,11 @@ function ChatContent() {
             {/* Loading Indicator */}
             {loading && (
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-theme-ai text-white flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 flex items-center gap-2 shadow-sm">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                <div className="p-3.5 rounded-2xl bg-theme-panel border border-theme-divider text-xs text-theme-muted flex items-center gap-2 shadow-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-aiAccent" />
                   Generating grounded answer with citations...
                 </div>
               </div>
@@ -626,7 +621,7 @@ function ChatContent() {
           </div>
 
           {/* Bottom Chat Input Bar & Tuning Controls */}
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+          <div className="p-4 border-t border-theme-divider bg-theme-panel shrink-0">
             <div className="max-w-4xl mx-auto space-y-3">
               {/* Question Input Form */}
               <form
@@ -645,19 +640,21 @@ function ChatContent() {
                       : "Ask any question across your entire document vault..."
                   }
                   disabled={loading}
+                  required
+                  maxLength={2000}
                   className="flex-1 text-xs"
                 />
-                <Button type="submit" disabled={loading || !question.trim()} size="sm" className="gap-1.5">
+                <Button type="submit" variant="ai" disabled={loading || !question.trim()} size="sm" className="gap-1.5">
                   <Send className="w-3.5 h-3.5" />
                   Ask AI
                 </Button>
               </form>
 
               {/* RAG Parameter Tuning Bar */}
-              <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-3 pt-1">
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-theme-muted gap-3 pt-1">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3 h-3 text-slate-500" />
+                    <SlidersHorizontal className="w-3 h-3 text-theme-muted" />
                     <span>Top-K:</span>
                     <input
                       type="range"
@@ -665,9 +662,9 @@ function ChatContent() {
                       max="10"
                       value={topK}
                       onChange={(e) => setTopK(e.target.value)}
-                      className="w-16 h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      className="w-16 h-1 bg-theme-divider rounded-lg appearance-none cursor-pointer accent-theme-ai"
                     />
-                    <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                    <span className="font-mono text-theme-text font-semibold">
                       {topK}
                     </span>
                   </div>
@@ -681,9 +678,9 @@ function ChatContent() {
                       step="0.05"
                       value={threshold}
                       onChange={(e) => setThreshold(e.target.value)}
-                      className="w-16 h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      className="w-16 h-1 bg-theme-divider rounded-lg appearance-none cursor-pointer accent-theme-ai"
                     />
-                    <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                    <span className="font-mono text-theme-text font-semibold">
                       {Number(threshold).toFixed(2)}
                     </span>
                   </div>
@@ -695,7 +692,6 @@ function ChatContent() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Rename Modal */}
       <RenameModal
@@ -712,7 +708,7 @@ function ChatContent() {
         conversation={deleteTarget}
         onSuccess={handleDeleteSuccess}
       />
-    </div>
+    </DashboardLayout>
   );
 }
 
@@ -720,8 +716,8 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <div className="flex h-[100dvh] items-center justify-center bg-theme-body">
+          <Loader2 className="w-6 h-6 animate-spin text-theme-primary" />
         </div>
       }
     >

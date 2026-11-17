@@ -1,53 +1,53 @@
 import React from "react";
 import Link from "next/link";
-import { FileText, Github, Shield } from "lucide-react";
+import { FileText, Shield } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm transition-colors">
+    <footer className="border-t border-theme-divider bg-theme-panel transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand Col */}
-          <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-2.5 font-bold text-xl tracking-tight">
-              <div className="h-8 w-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xs">
-                <FileText className="w-4 h-4" />
+          <div className="md:col-span-2 space-y-3">
+            <div className="flex items-center gap-2.5 font-semibold text-base tracking-tight text-theme-text">
+              <div className="h-7 w-7 rounded-md bg-theme-text text-theme-panel flex items-center justify-center shadow-xs">
+                <FileText className="w-4 h-4" strokeWidth={1.5} />
               </div>
-              <span>
-                Docu<span className="text-blue-600 dark:text-blue-500">Mind</span>
+              <span className="text-theme-text">
+                Docu<span className="text-theme-primary">Mind</span>
               </span>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-              Enterprise-grade document intelligence platform. Turn your PDFs, DOCX, TXT, and CSV documents into an interactive knowledge base with verifiable citations.
+            <p className="text-sm text-theme-muted max-w-sm leading-relaxed">
+              Document intelligence platform. Query PDF, DOCX, TXT, and CSV documents with verifiable source citations and pgvector similarity search.
             </p>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Shield className="w-4 h-4 text-emerald-500" />
-              <span>User-isolated vector boundaries & strict data privacy</span>
+            <div className="flex items-center gap-2 text-xs text-theme-muted">
+              <Shield className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.5} />
+              <span>User-isolated vector boundaries and data privacy</span>
             </div>
           </div>
 
           {/* Core Features */}
           <div>
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Capabilities</h4>
-            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+            <h4 className="text-xs font-semibold text-theme-text mb-3">Capabilities</h4>
+            <ul className="space-y-2 text-xs text-theme-muted">
               <li>
-                <a href="#features" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Semantic Q&A
+                <a href="#features" className="hover:text-theme-text transition-colors">
+                  Semantic retrieval
                 </a>
               </li>
               <li>
-                <a href="#features" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Source Citations
+                <a href="#features" className="hover:text-theme-text transition-colors">
+                  Source citations
                 </a>
               </li>
               <li>
-                <a href="#features" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Document Summaries
+                <a href="#features" className="hover:text-theme-text transition-colors">
+                  Document summaries
                 </a>
               </li>
               <li>
-                <a href="#features" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Document Comparison
+                <a href="#features" className="hover:text-theme-text transition-colors">
+                  Revision comparison
                 </a>
               </li>
             </ul>
@@ -55,10 +55,10 @@ export function Footer() {
 
           {/* Architecture / Tech Stack */}
           <div>
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Approved Stack</h4>
-            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+            <h4 className="text-xs font-semibold text-theme-text mb-3">Architecture</h4>
+            <ul className="space-y-2 text-xs text-theme-muted">
               <li>Next.js App Router (React)</li>
-              <li>PostgreSQL & pgvector</li>
+              <li>PostgreSQL &amp; pgvector</li>
               <li>Drizzle ORM</li>
               <li>Tailwind CSS</li>
               <li>Clerk Authentication</li>
@@ -66,17 +66,17 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-4">
-          <p>© {new Date().getFullYear()} DocuMind. Master Spec v1.0. All rights reserved.</p>
+        <div className="pt-8 border-t border-theme-divider flex flex-col sm:flex-row items-center justify-between text-xs text-theme-muted gap-4">
+          <p>© {new Date().getFullYear()} DocuMind. Licensed under MIT.</p>
           <div className="flex items-center gap-6">
-            <Link href="/terms" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-              Terms of Service
+            <Link href="/terms" className="hover:text-theme-text transition-colors">
+              Terms of service
             </Link>
-            <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-              Privacy Policy
+            <Link href="/privacy" className="hover:text-theme-text transition-colors">
+              Privacy policy
             </Link>
-            <span className="text-slate-400 dark:text-slate-500 font-mono text-[11px] hidden md:inline">
-              DocuMind Engine v1.0 • pgvector RAG Active
+            <span className="text-theme-muted font-mono text-xs hidden md:inline">
+              pgvector 768d
             </span>
           </div>
         </div>
@@ -84,3 +84,5 @@ export function Footer() {
     </footer>
   );
 }
+
+export default Footer;

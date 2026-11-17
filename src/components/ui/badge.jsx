@@ -2,12 +2,13 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = {
-  default: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
-  secondary: "border-transparent bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100",
-  outline: "text-slate-900 border-slate-300 dark:text-slate-100 dark:border-slate-700",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800",
-  destructive: "border-red-200 bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800",
+  default: "border-transparent bg-theme-primary text-theme-primaryBtn hover:bg-theme-primaryHover",
+  secondary: "border-transparent bg-theme-body text-theme-text",
+  outline: "text-theme-text border-theme-divider bg-theme-panel",
+  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  destructive: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+  warning: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  ai: "border-theme-ai/30 bg-theme-ai/10 text-theme-aiAccent",
 };
 
 export function Badge({ className, variant = "default", children, ...props }) {

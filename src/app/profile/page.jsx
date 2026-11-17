@@ -3,27 +3,22 @@
 import React from "react";
 import Link from "next/link";
 import { UserProfile } from "@clerk/nextjs";
-import { Sidebar } from "@/components/layout/sidebar";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function ProfilePage() {
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      {/* Sidebar Navigation */}
-      <Sidebar />
-
-      {/* Main Content Area */}
-      <div className="flex-1 min-w-0 w-full overflow-y-auto flex flex-col">
-        <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-3">
+    <DashboardLayout>
+      <header className="min-h-16 h-auto py-3 px-4 sm:px-6 shrink-0 border-b border-theme-divider bg-theme-panel/80 backdrop-blur-md flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard" className="gap-1.5 text-xs text-slate-500">
+              <Link href="/dashboard" className="gap-1.5 text-xs text-theme-muted">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Dashboard
               </Link>
             </Button>
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-base font-bold text-theme-text">
               Account Profile & Security
             </h1>
           </div>
@@ -33,13 +28,12 @@ export default function ProfilePage() {
           <UserProfile
             appearance={{
               elements: {
-                rootBox: "w-full shadow-md rounded-2xl border border-slate-200 dark:border-slate-800",
-                card: "border-none shadow-none rounded-2xl",
+                rootBox: "w-full shadow-md rounded-2xl border border-theme-divider bg-theme-panel text-theme-text",
+                card: "border-none shadow-none rounded-2xl bg-theme-panel text-theme-text",
               },
             }}
           />
         </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }

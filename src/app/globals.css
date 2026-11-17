@@ -2,31 +2,96 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --surface: #f8fafc;
-  --foreground: #09090b;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --primary: #0f172a;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #09090b;
-    --surface: #121215;
-    --foreground: #fafafa;
-    --muted: #18181b;
-    --muted-foreground: #a1a1aa;
-    --border: #27272a;
-    --primary: #2563eb;
-  }
-}
+    color-scheme: light dark;
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  min-height: 100vh;
+    --bg-body: light-dark(#fdfbf7, #131715);
+    --bg-panel: light-dark(#ffffff, #1c221e);
+    --border-divider: light-dark(#e6e4df, #354039);
+    --text-main: light-dark(#2d332f, #f4f6f5);
+    --text-muted: light-dark(#6b726d, #a8b5ac);
+    --bg-primary: light-dark(#4a6b53, #7ca187);
+    --bg-primary-hover: light-dark(#3c5743, #8fba9c);
+    --text-primary-btn: light-dark(#ffffff, #0d120f);
+    --bg-ai: light-dark(#c86d51, #e08f76);
+    --bg-ai-hover: light-dark(#b25e44, #eea48e);
+    --text-ai-accent: light-dark(#c86d51, #eea48e);
+
+    /* Legacy component mappings */
+    --background: var(--bg-body);
+    --surface: var(--bg-panel);
+    --foreground: var(--text-main);
+    --muted: var(--border-divider);
+    --muted-foreground: var(--text-muted);
+    --border: var(--border-divider);
+    --primary: var(--bg-primary);
+    --primary-hover: var(--bg-primary-hover);
+    --primary-foreground: var(--text-primary-btn);
+    --ai: var(--bg-ai);
+    --ai-hover: var(--bg-ai-hover);
+    --ai-foreground: var(--text-primary-btn);
+    --ai-surface: light-dark(#faeedf, #2a201b);
+    --ai-border: light-dark(#e6cdb3, #4d382d);
+  }
+
+  :root:has(.dark), .dark {
+    color-scheme: dark;
+  }
+
+  :root:has(.light), .light {
+    color-scheme: light;
+  }
+
+  body {
+    color: var(--text-main);
+    background: var(--bg-body);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    min-height: 100dvh;
+  }
+
+  /* Native <dialog> styling and ::backdrop */
+  dialog {
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    max-width: 100vw;
+    max-height: 100dvh;
+  }
+
+  dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Native HTML5 Popover styling and ::backdrop */
+  [popover] {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    inset: auto;
+  }
+
+  [popover]::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Native :user-invalid form validation */
+  input:user-invalid,
+  select:user-invalid,
+  textarea:user-invalid {
+    border-color: #ef4444 !important;
+  }
+
+  input:user-invalid:focus-visible,
+  select:user-invalid:focus-visible,
+  textarea:user-invalid:focus-visible {
+    outline-color: #ef4444 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+  }
 }
